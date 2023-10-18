@@ -1,30 +1,40 @@
+import numpy as np
+from transformers import AutoFeatureExtractor
 import timm
 from datasets import load_dataset
 from neural_compressor import PostTrainingQuantConfig
-from neural_compressor.data import DataLoader, Datasets
+from neural_compressor.data import DataLoader
 from neural_compressor.quantization import fit
 
-dataset = load_dataset("MMInstruction/M3IT", split="test")  # Selecting only the test split for the dataset
+#model = timm.create_model("hf_hub:timm/resnet50.a1_in1k", pretrained=True)
+model = timm.create_model("hf_hub:Bingsu/timm-mobilevitv2_050-beans", pretrained=True)
 
-# Use the prepare_tf_dataset method from 🤗 Transformers to prepare the dataset to be compatible with TensorFlow,
-# and ready to train/fine-tune a model, as it wraps a HuggingFace Dataset as a tf.data.Dataset with collation and
-# batching, so one can pass it directly to Keras methods like fit() without further modification.
+dataset = load_dataset("beans", split="test")  # Selecting only the test split of the dataset
+tf_ds = dataset.to_tf_dataset(
+            columns=["image"],
+            label_cols=["labels"],
+            batch_size=2,
+            shuffle=False
+            )
 
+#Data augmentation step
+#feature_extractor = AutoFeatureExtractor.from_pretrained("google/vit-base-patch16-224-in21k")
 
+#def transforms(examples):
+#    examples["pixel_values"] = [
+#        np.array(image)["image"] for image in examples["image"]
+#    ]
+#    return examples
 
-dataloader = DataLoader(framework="tensorflow", dataset=dataset)    #Keep tensorflow as the main framework
+dataloader = DataLoader(framework='tensorflow', dataset=tf_ds)
 
-model = timm.create_model("hf_hub:timm/resnet50.a1_in1k", pretrained=True)
-
-tf_dataset = model.prepare_tf_dataset(
-    dataset,
-    batch_size=4,
-    shuffle=True
-)
-
+print("Starting model quantization")
 
 q_model = fit(
     model=model,
     conf=PostTrainingQuantConfig(),
     calib_dataloader=dataloader
 )
+
+print("Saving quantized model")
+q_model.save("./output")
