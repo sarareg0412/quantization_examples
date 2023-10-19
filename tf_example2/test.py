@@ -49,6 +49,7 @@ from neural_compressor.data import DataLoader
 dataset = Dataset()
 dataloader = DataLoader(framework='tensorflow', dataset=dataset)
 config = PostTrainingQuantConfig(backend='itex')
+
 q_model = fit(
     model='./models/saved_model',
     conf=config,
