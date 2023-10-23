@@ -49,7 +49,7 @@ from neural_compressor.data import DataLoader
 dataset = Dataset()
 dataloader = DataLoader(framework='tensorflow', dataset=dataset)
 config = PostTrainingQuantConfig(backend='itex')
-
+print("Starting quantization")
 q_model = fit(
     model='./models/saved_model',
     conf=config,
@@ -57,7 +57,8 @@ q_model = fit(
     eval_dataloader=dataloader,
     eval_metric=MyMetric())
 
-# Optional, run quantized model
+
+print("Optional, run quantized model")
 keras_model = q_model.model
 predictions = keras_model.predict_on_batch(dataset.test_images)
 print("Inference is done.")
