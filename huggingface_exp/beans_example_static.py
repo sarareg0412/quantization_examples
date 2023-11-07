@@ -12,13 +12,24 @@ model_name = "nateraw/vit-base-beans"
 model = AutoModelForImageClassification.from_pretrained(model_name, num_labels=3)
 extractor = AutoFeatureExtractor.from_pretrained(model_name)  # Extremely important
 eval_dataset = load_dataset("beans", split="test")
+save_dir = "./beans_exp_static/model_inc"
+
+processor = ViTImageProcessor.from_pretrained(model_name)
+
+def preprocess_function(example_batch):
+    # Take a list of PIL images and turn them to pixel values
+    inputs = extractor([x for x in example_batch['image']], return_tensors='pt')
+    # Don't forget to include the labels!
+    inputs['labels'] = example_batch['labels']
+    return inputs
+
 
 def eval_func(model):
     task_evaluator = evaluate.evaluator("image-classification")
     results = task_evaluator.compute(
         model_or_pipeline=model,
         feature_extractor=extractor,
-        data=eval_dataset,
+        data=eval_dataset.with_transform(preprocess_function),
         metric=evaluate.load("accuracy"),
         input_column="image",
         label_column="labels",
@@ -26,20 +37,30 @@ def eval_func(model):
     )
     return results["accuracy"]
 
+
+quantizer = INCQuantizer.from_pretrained(model=model, eval_fn=eval_func)
+#quantizer = INCQuantizer.from_pretrained(model=model)
+
+calibration_dataset = quantizer.get_calibration_dataset(
+    dataset_name="beans",
+    preprocess_function=preprocess_function,
+    num_samples=104
+)
+
 # Set up quantization configuration
 tuning_criterion = TuningCriterion(max_trials=10)
 accuracy_criterion = AccuracyCriterion(tolerable_loss=0.05)
 # Load the quantization configuration detailing the quantization we wish to apply
 quantization_config = PostTrainingQuantConfig(
-    approach="dynamic",  # Change as wished
+    approach="static",  # Change as wished
     accuracy_criterion=accuracy_criterion,
     tuning_criterion=tuning_criterion,
 )
 
-save_dir = "./beans_exp_static/model_inc"
-
-quantizer = INCQuantizer.from_pretrained(model=model, eval_fn=eval_func)
 
 # The directory where the quantized model will be saved
 # Quantize and save the model
-quantizer.quantize(quantization_config=quantization_config, save_directory=save_dir)
+quantizer.quantize(
+    quantization_config=quantization_config,
+    calibration_dataset=calibration_dataset,
+    save_directory=save_dir)

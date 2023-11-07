@@ -25,7 +25,7 @@ calibration_dataset = quantizer.get_calibration_dataset(
     num_samples=100,
     dataset_split="train",
 )
-quantizer = INCQuantizer.from_pretrained(model)
+#quantizer = INCQuantizer.from_pretrained(model)
 # Apply static quantization and save the resulting model
 quantizer.quantize(
     quantization_config=quantization_config,
