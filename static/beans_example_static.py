@@ -12,7 +12,7 @@ model_name = "nateraw/vit-base-beans"
 model = AutoModelForImageClassification.from_pretrained(model_name, num_labels=3)
 extractor = AutoFeatureExtractor.from_pretrained(model_name)  # Extremely important
 eval_dataset = load_dataset("beans", split="test")
-save_dir = "./beans_exp_static/model_inc"
+save_dir = "../static/beans_exp_static/model_inc"
 
 processor = ViTImageProcessor.from_pretrained(model_name)
 
@@ -34,11 +34,12 @@ def eval_func(model):
         input_column="image",
         label_column="labels",
         label_mapping=model.config.label2id,
+
     )
     return results["accuracy"]
 
 
-quantizer = INCQuantizer.from_pretrained(model=model, eval_fn=eval_func)
+quantizer = INCQuantizer.from_pretrained(model=model)
 #quantizer = INCQuantizer.from_pretrained(model=model)
 
 calibration_dataset = quantizer.get_calibration_dataset(

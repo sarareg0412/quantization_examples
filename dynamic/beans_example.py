@@ -36,7 +36,7 @@ quantization_config = PostTrainingQuantConfig(
     tuning_criterion=tuning_criterion,
 )
 
-save_dir = "./beans_exp_static/model_inc"
+save_dir = "../static/beans_exp_static/model_inc"
 
 quantizer = INCQuantizer.from_pretrained(model=model, eval_fn=eval_func)
 
