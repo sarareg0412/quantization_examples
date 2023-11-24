@@ -31,7 +31,7 @@ def eval_func(model):
 
 
 tuning_criterion = TuningCriterion(max_trials=10)
-accuracy_criterion = AccuracyCriterion(tolerable_loss=0.5)
+accuracy_criterion = AccuracyCriterion(tolerable_loss=0.1)
 # Load the quantization configuration detailing the quantization we wish to apply
 quantization_config = PostTrainingQuantConfig(
     approach="static",  # Change as wished
