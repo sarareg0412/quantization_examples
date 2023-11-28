@@ -1,12 +1,15 @@
 from functools import reduce
 
+
+from sklearn.preprocessing import minmax_scale, MinMaxScaler
 import numpy
-from huggingface_hub import HfApi, ModelFilter  # api to interact with the hub
+from huggingface_hub import HfApi, ModelFilter, DatasetFilter  # api to interact with the hub
 
 N_MODELS = 5
 hf_api = HfApi()
-categories = ["multi-modal","computer-vision","natural-language-processing","audio","tabular","reinforcement-learning"]
-category = categories[3]
+categories = ["multi-modal", "computer-vision", "natural-language-processing", "audio", "tabular",
+              "reinforcement-learning"]
+category = categories[1]
 # The dictionary has categories as keys and the list of tasks associated with them as values.
 category_dict = {"multi-modal": ["feature-extraction", "text-to-image", "image-to-text", "text-to-video",
                                  "visual-question-answering",
@@ -30,8 +33,8 @@ category_dict = {"multi-modal": ["feature-extraction", "text-to-image", "image-t
 
 
 def add_properties(model, task):
-    # model.ratio = model.likes/model.downloads
     model.task = task
+    # model.ratio = model.likes/model.downloads
     return model
 
 
@@ -42,12 +45,37 @@ def get_models_of_task(task):
             task=task,
         ),
         sort="likes" and "downloads",  # Values are the properties of the huggingface_hub.hf_api.ModelInfo class.
-        direction=-1,    # sort by descending order
-        limit=N_MODELS,  # The limit on the number of models fetched.
-        cardData=True    # Whether to grab the metadata for the model as well. Can contain useful information such as
-                         # carbon emissions, metrics, and datasets trained on.
+        direction=-1,  # sort by descending order
+        limit=N_MODELS*N_MODELS,  # The limit on the number of models fetched.
+        cardData=True  # Whether to grab the metadata for the model as well. Can contain useful information such as
+        # carbon emissions, metrics, and datasets trained on.
     )))
 
+
+def check_existing_dataset(model):
+    # They said it would work with a list of strings as dataset_name but it doesn't
+    model_datasets = []
+    for dataset in model.cardData["datasets"]:
+        ds = list(hf_api.list_datasets(
+            filter=DatasetFilter(
+                dataset_name=dataset
+            ),
+            limit=1
+        ))
+        # Add the dataset only if its name matches the one on the model's metadata
+        if len(ds) == 1 and ds[0].id == dataset:
+            model_datasets.append(ds)
+
+    return len(model_datasets) > 0
+
+def normalize_models(models):
+    data = list(map(lambda x: x.downloads,models))
+    scaler = MinMaxScaler()
+    scaler.fit(data)
+    res = scaler.transform(data)
+    print(res)
+    #models_scaled = minmax_scale(models[['likes','downloads']], feature_range=(0,1))
+    return 1
 
 def get_models_of_category(list_tasks):
     # We reduce the list of models of different tasks per category, in a single 1D list
@@ -55,9 +83,16 @@ def get_models_of_category(list_tasks):
     # Take out duplicate models since the same model could belong to different tasks of the same category
     seen = set()
     models = [mod for mod in models if mod.id not in seen and not seen.add(mod.id)]
+    # TODO Normalize phase
+    normalize_models(models)
+    # TODO Sort based on our own metric
+    models.sort(key=lambda x: x.likes, reverse=True)
+
     # Select only models that have datasets info in their cardData metadata
-    models = list(filter(lambda x: ("datasets" in x.cardData), filter(lambda x: (getattr(x, "cardData", None) is not None), models)))
-    #TODO add double check of existing datasets
+    models = list(filter(lambda x: ("datasets" in x.cardData),
+                         filter(lambda x: (getattr(x, "cardData", None) is not None), models)))
+    # Filter out models that don't have datasets on huggingface
+    models = list(filter(lambda model: check_existing_dataset(model), models))
     return models
 
 
@@ -65,10 +100,10 @@ def get_models_of_category(list_tasks):
 models = get_models_of_category(list_tasks=category_dict[category])
 # We filter out models with 0 likes or downloads and turn everything into a list. We add the
 # "ratio" parameter to the model, representing the ratio between #likes/#downloads
-# Sorting phase based on likes,downloads or ratio. TBD with our own metric
-models.sort(key=lambda x: x.likes, reverse=True)
+
 print("Top {} models for category {}.".format(N_MODELS, category))
 print("Model name\t\t\t\t\tlikes\tdownloads\tlibrary\ttask\tdatasets")
 for model in models[:N_MODELS]:
-    print("{}\t{}\t{}\t{}\t{}\t{}".format(model.modelId, model.likes, model.downloads, getattr(model,"library_name","None")
-                                          ,model.task, model.cardData["datasets"], ))
+    print("{}\t{}\t{}\t{}\t{}\t{}".format(model.modelId, model.likes, model.downloads,
+                                          getattr(model, "library_name", "None")
+                                          , model.task, model.cardData["datasets"], ))
