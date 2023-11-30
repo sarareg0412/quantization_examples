@@ -1,3 +1,5 @@
+from collections import ChainMap
+from distutils.command.config import config
 from functools import reduce
 from utils import categories, category_dict
 from sklearn.preprocessing import minmax_scale, MinMaxScaler
@@ -6,9 +8,8 @@ from huggingface_hub import HfApi, ModelFilter, DatasetFilter  # api to interact
 
 N_MODELS = 5
 hf_api = HfApi()
-
-category = categories[1]
-
+SIMPLE_FILTER = False
+category = categories[5]
 
 def add_properties(model, task):
     model.task = task
@@ -23,44 +24,58 @@ def get_models_of_task(task):
                                 filter=ModelFilter(
                                     task=task,
                                 ),
-                                sort="likes",  # Values are the properties of the huggingface_hub.hf_api.ModelInfo class.
-                                direction=-1,  # sort by descending order
+                                sort="likes",       # Values are the properties of the huggingface_hub.hf_api.ModelInfo class.
+                                direction=-1,       # sort by descending order
                                 limit=N_MODELS*N_MODELS,  # The limit on the number of models fetched.
-                                cardData=True  # Whether to grab the metadata for the model as well. Can contain useful information such as
-                                # carbon emissions, metrics, and datasets trained on.
+                                cardData=True,      # Whether to grab the metadata for the model as well. Can contain useful information such as
+                                                    # carbon emissions, metrics, and datasets trained on.
                             )
                         ))
     # Further filtering because the "task" filter is sometimes not the same as the pipeline_tag, which is what is
     # actually used to filter the models on the website.
-    return list(filter(lambda x: x.task == x.pipeline_tag , models))
+    return list(filter(lambda x: x.task == x.pipeline_tag, models))
 
 
 def check_existing_dataset(model):
     # They said it would work with a list of strings as dataset_name but it doesn't
-    model_datasets = []
     for dataset in model.cardData["datasets"]:
         ds = list(hf_api.list_datasets(
             filter=DatasetFilter(
                 dataset_name=dataset
             ),
-            limit=1
+            limit=1,
+            full=True
         ))
-        # If we retrieved one dataset and its name matches the one on the model's metadata we return True:
-        # that means we found the exact dataset used to train the model
-        if len(ds) == 1 and ds[0].id == dataset:
-            model.dataset = dataset
-            return True
+
+        if SIMPLE_FILTER:
+            if len(ds) == 1 and ds[0].id == dataset:
+                model.dataset = dataset
+                return True
+        else:
+            # If we retrieved one dataset and its name matches the one on the model's metadata we return True:
+            # that means we found the exact dataset used to train the model
+            if len(ds) == 1 and ds[0].id == dataset:
+                datasetInfo = ds[0]
+                # Check whether the cardData info and 'dataset_info' exist
+                if (getattr(datasetInfo, "cardData", None) is not None) and ('dataset_info' in datasetInfo.cardData) :
+                    # If so, then the dataset has multiple configurations and we have to loop through them
+                    if isinstance(datasetInfo.cardData['dataset_info'], list):
+                        for config in datasetInfo.cardData['dataset_info']:
+                            for split in config['splits']:
+                                if split['name'] == 'test':
+                                    #split_list = ds_list[i]['splits']
+                                    model.dataset = dataset
+                                    model.dataset_configuration = config
+                                    return True
+                    else:
+                        for split in datasetInfo.cardData['dataset_info']['splits']:
+                            if split['name'] == 'test':
+                                # split_list = ds_list[i]['splits']
+                                model.dataset = dataset
+                                return True
 
     return False
 
-def normalize_models(models):
-    data = list(map(lambda x: x.downloads,models))
-    scaler = MinMaxScaler()
-    scaler.fit(data)
-    res = scaler.transform(data)
-    print(res)
-    #models_scaled = minmax_scale(models[['likes','downloads']], feature_range=(0,1))
-    return 1
 
 def get_top_models_of_category(list_tasks, n):
     # Retrieving the list of models for all tasks in the category
@@ -70,8 +85,6 @@ def get_top_models_of_category(list_tasks, n):
     # Take out duplicate models since the same model could belong to different tasks of the same category
     seen = set()
     models = [mod for mod in models if mod.id not in seen and not seen.add(mod.id)]
-    # TODO Normalize phase
-    #normalize_models(models)
 
     # Select only models that have datasets info in their cardData metadata
     models = list(filter(lambda x: ("datasets" in x.cardData),
