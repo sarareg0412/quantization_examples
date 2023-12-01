@@ -1,3 +1,4 @@
+import csv
 from collections import ChainMap
 from distutils.command.config import config
 from functools import reduce
@@ -9,7 +10,7 @@ from huggingface_hub import HfApi, ModelFilter, DatasetFilter  # api to interact
 N_MODELS = 5
 hf_api = HfApi()
 SIMPLE_FILTER = False
-category = categories[5]
+category = categories[3]
 
 def add_properties(model, task):
     model.task = task
@@ -38,6 +39,7 @@ def get_models_of_task(task):
 
 def check_existing_dataset(model):
     # They said it would work with a list of strings as dataset_name but it doesn't
+    # For all datasets used to train the model we retrieve its info.
     for dataset in model.cardData["datasets"]:
         ds = list(hf_api.list_datasets(
             filter=DatasetFilter(
@@ -48,6 +50,7 @@ def check_existing_dataset(model):
         ))
 
         if SIMPLE_FILTER:
+            # We return the first dataset that matches the given name without further investigations on it
             if len(ds) == 1 and ds[0].id == dataset:
                 model.dataset = dataset
                 return True
@@ -56,21 +59,22 @@ def check_existing_dataset(model):
             # that means we found the exact dataset used to train the model
             if len(ds) == 1 and ds[0].id == dataset:
                 datasetInfo = ds[0]
-                # Check whether the cardData info and 'dataset_info' exist
-                if (getattr(datasetInfo, "cardData", None) is not None) and ('dataset_info' in datasetInfo.cardData) :
-                    # If so, then the dataset has multiple configurations and we have to loop through them
+                # Check whether the cardData and 'dataset_info' attributes exist
+                if (getattr(datasetInfo, "cardData", None) is not None) and ('dataset_info' in datasetInfo.cardData):
+                    # We check whether the dataset has multiple configurations. If so, we have to loop through them
                     if isinstance(datasetInfo.cardData['dataset_info'], list):
                         for config in datasetInfo.cardData['dataset_info']:
+                            # We look for the "test" split of the dataset configuration and if there is one we return
+                            # True because we only need one dataset with the test split.
                             for split in config['splits']:
                                 if split['name'] == 'test':
-                                    #split_list = ds_list[i]['splits']
                                     model.dataset = dataset
-                                    model.dataset_configuration = config
+                                    model.ds_config_name = config['config_name']
                                     return True
                     else:
+                        # The dataset doesn't have multiple configurations, we look for the "test" split.
                         for split in datasetInfo.cardData['dataset_info']['splits']:
                             if split['name'] == 'test':
-                                # split_list = ds_list[i]['splits']
                                 model.dataset = dataset
                                 return True
 
@@ -91,19 +95,33 @@ def get_top_models_of_category(list_tasks, n):
                          filter(lambda x: (getattr(x, "cardData", None) is not None), models)))
     # Filter out models that don't have datasets on huggingface
     models = list(filter(lambda model: check_existing_dataset(model), models))
-    # TODO Sort based on our own metric
+    # Sort based on our own metric
     models.sort(key=lambda x: x.likes, reverse=True)
-    return models[:n]
+    top_n_models = list(map(lambda model: [model.modelId, model.likes, model.downloads
+                                        , model.task, getattr(model, "library_name", "")
+                                        , model.dataset,  getattr(model, "ds_config_name", "")], models[:n]))
+    return top_n_models
+
+def create_csv(models):
+    csv_file = 'model_data.csv'
+
+    with open(csv_file, mode='w', newline='') as file:
+        writer = csv.writer(file)
+        # Write the header
+        writer.writerow(['Model name', 'Likes', 'Downloads', 'Task', 'Library', 'Dataset', 'Dataset Config name'])
+        # Write the remaining rows
+        writer.writerows(models)
+
+        #for category in models:
+        #    writer.writerows(category)
 
 
 # We get the list of top models for a list of tasks of the same category.
 models = get_top_models_of_category(list_tasks=category_dict[category], n=N_MODELS)
 # We filter out models with 0 likes or downloads and turn everything into a list. We add the
 # "ratio" parameter to the model, representing the ratio between #likes/#downloads
-
+create_csv(models)
 print("Top {} models for category {}.".format(N_MODELS, category))
-print("{:<50} {:<10} {:<15} {:<30} {:<20} {:<10}".format('Model name','Likes','Downloads','Task', 'Library', 'Dataset'))
+print("{:<50} {:<10} {:<15} {:<30} {:<25} {:<15} {:<15}".format('Model name','Likes','Downloads','Task', 'Library', 'Dataset', "Config"))
 for model in models:
-    print("{:<50} {:<10} {:<15} {:<30} {:<20} {:<10}".format(model.modelId, model.likes, model.downloads
-                                          , model.task, getattr(model, "library_name", "None")
-                                                             , model.dataset ))
+    print(model)
