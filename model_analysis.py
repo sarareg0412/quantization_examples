@@ -1,20 +1,11 @@
 import csv
-from collections import ChainMap
-from distutils.command.config import config
-from functools import reduce
-from utils import categories, category_dict
-from sklearn.preprocessing import minmax_scale, MinMaxScaler
-import numpy
+from utils import *
 from huggingface_hub import HfApi, ModelFilter, DatasetFilter  # api to interact with the hub
 
-N_MODELS = 5
 hf_api = HfApi()
-SIMPLE_FILTER = False
-category = categories[3]
 
 def add_properties(model, task):
     model.task = task
-    # model.ratio = model.likes/model.downloads
     return model
 
 
@@ -59,33 +50,41 @@ def check_existing_dataset(model):
             # that means we found the exact dataset used to train the model
             if len(ds) == 1 and ds[0].id == dataset:
                 datasetInfo = ds[0]
-                # Check whether the cardData and 'dataset_info' attributes exist
-                if (getattr(datasetInfo, "cardData", None) is not None) and ('dataset_info' in datasetInfo.cardData):
+                # Check whether the "cardData", 'dataset_info' and "splits" attributes exist
+                if (getattr(datasetInfo, "cardData", None) is not None) and ('dataset_info' in datasetInfo.cardData)\
+                        and ('splits' in datasetInfo.cardData["dataset_info"]) :
                     # We check whether the dataset has multiple configurations. If so, we have to loop through them
                     if isinstance(datasetInfo.cardData['dataset_info'], list):
                         for config in datasetInfo.cardData['dataset_info']:
                             # We look for the "test" split of the dataset configuration and if there is one we return
                             # True because we only need one dataset with the test split.
-                            for split in config['splits']:
+                            try:
+                                for split in config['splits']:
+                                    if split['name'] == 'test':
+                                        model.dataset = dataset
+                                        model.ds_config_name = config['config_name']
+                                        return True
+                            except Exception as e:
+                                print(e)
+
+                    else:
+                        try:
+                            # The dataset doesn't have multiple configurations, we look for the "test" split.
+                            for split in datasetInfo.cardData['dataset_info']['splits']:
                                 if split['name'] == 'test':
                                     model.dataset = dataset
-                                    model.ds_config_name = config['config_name']
                                     return True
-                    else:
-                        # The dataset doesn't have multiple configurations, we look for the "test" split.
-                        for split in datasetInfo.cardData['dataset_info']['splits']:
-                            if split['name'] == 'test':
-                                model.dataset = dataset
-                                return True
+                        except Exception as e:
+                            print(e)
 
     return False
 
 
-def get_top_models_of_category(list_tasks, n):
+def get_top_models_of_category(category, n):
     # Retrieving the list of models for all tasks in the category
-    models = [get_models_of_task(task) for task in list_tasks]
+    models = [get_models_of_task(task) for task in category_dict[category]]
     # We reduce the list of models of different tasks per category, in a single 1D list
-    models = reduce(lambda x, y: x + y, models, [])
+    models = reduce_to_1D_list(models)
     # Take out duplicate models since the same model could belong to different tasks of the same category
     seen = set()
     models = [mod for mod in models if mod.id not in seen and not seen.add(mod.id)]
@@ -98,30 +97,32 @@ def get_top_models_of_category(list_tasks, n):
     # Sort based on our own metric
     models.sort(key=lambda x: x.likes, reverse=True)
     top_n_models = list(map(lambda model: [model.modelId, model.likes, model.downloads
-                                        , model.task, getattr(model, "library_name", "")
-                                        , model.dataset,  getattr(model, "ds_config_name", "")], models[:n]))
+                                            , category, model.task, getattr(model, "library_name", "")
+                                            , model.dataset,  getattr(model, "ds_config_name", "")], models[:n]))
     return top_n_models
 
-def create_csv(models):
-    csv_file = 'model_data.csv'
 
+def create_csv(models_list):
+    csv_file = csv_name
     with open(csv_file, mode='w', newline='') as file:
         writer = csv.writer(file)
         # Write the header
-        writer.writerow(['Model name', 'Likes', 'Downloads', 'Task', 'Library', 'Dataset', 'Dataset Config name'])
+        writer.writerow(['model_name', 'likes', 'downloads', 'category', 'task', 'library', 'dataset', 'dataset_config_name'])
         # Write the remaining rows
-        writer.writerows(models)
-
-        #for category in models:
-        #    writer.writerows(category)
+        writer.writerows(models_list)
 
 
-# We get the list of top models for a list of tasks of the same category.
-models = get_top_models_of_category(list_tasks=category_dict[category], n=N_MODELS)
+models = []
+for i in range(1,6):
+    # We get the list of top models for a list of tasks of the same category.
+    category = categories[i]
+    print("Get top {} models of category {}".format(N_MODELS, category))
+    models.append(get_top_models_of_category(category=category, n=N_MODELS))
+
+
+models = reduce_to_1D_list(models)
 # We filter out models with 0 likes or downloads and turn everything into a list. We add the
 # "ratio" parameter to the model, representing the ratio between #likes/#downloads
+print("Start CSV creation.")
 create_csv(models)
-print("Top {} models for category {}.".format(N_MODELS, category))
-print("{:<50} {:<10} {:<15} {:<30} {:<25} {:<15} {:<15}".format('Model name','Likes','Downloads','Task', 'Library', 'Dataset', "Config"))
-for model in models:
-    print(model)
+print("Done.")

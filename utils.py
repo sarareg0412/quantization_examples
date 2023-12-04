@@ -1,4 +1,6 @@
 import os
+from functools import reduce
+
 import torch
 
 # The dictionary has categories as keys and the list of tasks associated with them as values.
@@ -23,7 +25,15 @@ category_dict = {"multi-modal": ["feature-extraction", "text-to-image", "image-t
                  }
 categories = ["multi-modal", "computer-vision", "natural-language-processing", "audio", "tabular",
               "reinforcement-learning"]
+csv_name = "model_data.csv"
+N_MODELS = 50
+SIMPLE_FILTER = False
+
 def print_size_of_model(model):
     torch.save(model.state_dict(), "temp.p")
     print('Size (MB):', os.path.getsize("temp.p")/1e6)
     os.remove('temp.p')
+
+
+def reduce_to_1D_list(list):
+    return reduce(lambda x, y: x + y, list, [])
