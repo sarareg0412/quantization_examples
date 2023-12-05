@@ -1,7 +1,7 @@
 from functools import partial
 
 from datasets import load_dataset
-from transformers import AutoModelForImageClassification, AutoFeatureExtractor, ViTImageProcessor
+from transformers import AutoModelForImageClassification, AutoFeatureExtractor
 from neural_compressor.config import AccuracyCriterion, PostTrainingQuantConfig, TuningCriterion
 import evaluate
 from optimum.intel.neural_compressor import INCQuantizer

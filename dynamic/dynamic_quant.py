@@ -6,8 +6,7 @@ from datasets import load_dataset
 
 from datasets import load_dataset
 from neural_compressor.config import AccuracyCriterion, PostTrainingQuantConfig, TuningCriterion
-#import evaluate
-#from optimum.intel.neural_compressor import INCQuantizer
+from optimum.intel.neural_compressor import INCQuantizer
 
 models = []
 # Load model and dataset from csv file
@@ -32,13 +31,18 @@ if(model_data["library"] == "transformers"):
     model = AutoModel.from_pretrained(model_data["model_name"])
     eval_dataset = load_dataset(model_data["dataset"], model_data["dataset_config_name"], split="test").select(range(300))
 
-# Set up quantization configuration
+# Set up quantization configuration and the maximum number of trials to 10
 tuning_criterion = TuningCriterion(max_trials=10)
-accuracy_criterion = AccuracyCriterion(tolerable_loss=0.05)
 # Load the quantization configuration detailing the quantization we wish to apply
 quantization_config = PostTrainingQuantConfig(
     approach="dynamic",  # Change as wished
-    accuracy_criterion=accuracy_criterion,
     tuning_criterion=tuning_criterion,
 )
 print("Start Quantization")
+# The saving directory will be of the type
+save_dir = "models/{}/{}".format(model["category"], model["id"])
+
+quantizer = INCQuantizer.from_pretrained(model=model)
+# The directory where the quantized model will be saved
+# Quantize and save the model
+quantizer.quantize(quantization_config=quantization_config, save_directory=save_dir)
