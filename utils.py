@@ -3,6 +3,7 @@ from functools import reduce
 
 import torch
 
+N_CATEGORIES = 6
 # The dictionary has categories as keys and the list of tasks associated with them as values.
 category_dict = {"multi-modal": ["feature-extraction", "text-to-image", "image-to-text", "text-to-video",
                                  "visual-question-answering",
