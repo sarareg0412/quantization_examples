@@ -1,18 +1,16 @@
-from functools import partial
 
 from datasets import load_dataset
-from transformers import AutoModelForImageClassification, AutoFeatureExtractor
+from transformers import AutoModel
 from neural_compressor.config import AccuracyCriterion, PostTrainingQuantConfig, TuningCriterion
 import evaluate
 from optimum.intel.neural_compressor import INCQuantizer
 
 # Load model and dataset
 model_name = "nateraw/vit-base-beans"
-# Taken from the model's page by clicking the "use in Transformer button"
-model = AutoModelForImageClassification.from_pretrained(model_name, num_labels=3)
-extractor = AutoFeatureExtractor.from_pretrained(model_name)  # Extremely important
+model = AutoModel.from_pretrained(model_name)
 eval_dataset = load_dataset("beans", split="test")
-
+#extractor = AutoFeatureExtractor.from_pretrained(model_name)  # Extremely important
+"""
 def eval_func(model):
     task_evaluator = evaluate.evaluator("image-classification")
     results = task_evaluator.compute(
@@ -25,7 +23,7 @@ def eval_func(model):
         label_mapping=model.config.label2id,
     )
     return results["accuracy"]
-
+ """
 # Set up quantization configuration
 tuning_criterion = TuningCriterion(max_trials=10)
 accuracy_criterion = AccuracyCriterion(tolerable_loss=0.05)
@@ -36,9 +34,9 @@ quantization_config = PostTrainingQuantConfig(
     tuning_criterion=tuning_criterion,
 )
 
-save_dir = "./beans_static_model"
+save_dir = "./beans_dynamic_model"
 
-quantizer = INCQuantizer.from_pretrained(model=model, eval_fn=eval_func)
+quantizer = INCQuantizer.from_pretrained(model=model)
 
 # The directory where the quantized model will be saved
 # Quantize and save the model
