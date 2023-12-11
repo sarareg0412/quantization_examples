@@ -1,16 +1,14 @@
 import csv
 from utils import *
+import subprocess
 
 from transformers import AutoModel
-from datasets import load_dataset
-
-from datasets import load_dataset
 from neural_compressor.config import AccuracyCriterion, PostTrainingQuantConfig, TuningCriterion
 from optimum.intel.neural_compressor import INCQuantizer
 
 models = []
 # Load model and dataset from csv file
-with open("../{}".format(csv_name)) as file:
+with open("../computer-vision_{}".format(csv_name)) as file:
     csvReader = csv.reader(file)
     # ['model_name', 'likes', 'downloads', 'category', 'task', 'library', 'dataset', 'dataset_config_name']
     header = csvReader.__next__()
@@ -27,9 +25,11 @@ for i in range(0, len(models), 50):
 # Quantize only the N_MODELS models of each category:
 #for model in top_N_models:
 model_data = top_N_models[0]
+model = None
+n_experiment = 1
+# Switch for the different kinds of libraries, only transformers is supported for now
 if(model_data["library"] == "transformers"):
     model = AutoModel.from_pretrained(model_data["model_name"])
-    eval_dataset = load_dataset(model_data["dataset"], model_data["dataset_config_name"], split="test").select(range(300))
 
 # Set up quantization configuration and the maximum number of trials to 10
 tuning_criterion = TuningCriterion(max_trials=10)
@@ -38,11 +38,16 @@ quantization_config = PostTrainingQuantConfig(
     approach="dynamic",  # Change as wished
     tuning_criterion=tuning_criterion,
 )
-print("Start Quantization")
-# The saving directory will be of the type
-save_dir = "models/{}/{}".format(model["category"], model["id"])
 
+
+model_data["model_name"] = model_data["model_name"].replace("/", "-")
+# The saving directory will be of the type models/computer-vision/model/id
+save_dir = "models/{}/{}".format(model_data["category"], model_data["model_name"])
+energy_output_file = "quantization_energy_output_{}_exp{}".format(model_data["model_name"], n_experiment)
+print("Start Quantization for model {}".format(model_data["model_name"]))
+subprocess.run(["energibridge", "-o", "{}".format(energy_output_file)])
 quantizer = INCQuantizer.from_pretrained(model=model)
 # The directory where the quantized model will be saved
 # Quantize and save the model
 quantizer.quantize(quantization_config=quantization_config, save_directory=save_dir)
+print("End Quantization for model {}, saved to {}".format(model_data["model_name"], save_dir))
