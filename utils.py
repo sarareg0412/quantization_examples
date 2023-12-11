@@ -27,8 +27,9 @@ category_dict = {"multi-modal": ["feature-extraction", "text-to-image", "image-t
 categories = ["multi-modal", "computer-vision", "natural-language-processing", "audio", "tabular",
               "reinforcement-learning"]
 csv_name = "model_data.csv"
-N_MODELS = 50
+N_MODELS = 5
 SIMPLE_FILTER = False
+N_EXPERIMENTS = 5
 
 def print_size_of_model(model):
     torch.save(model.state_dict(), "temp.p")

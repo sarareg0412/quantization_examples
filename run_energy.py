@@ -20,7 +20,7 @@ def run_quantization(save_dir, model_library, model_name):
     if model_library == "transformers":
         model = AutoModel.from_pretrained(model_name)
     quantizer = INCQuantizer.from_pretrained(model=model)
-    # The directory where the quantized model will be saved
+    # The directory where the quantized model will be savedcd
     # Quantize and save the model
     quantizer.quantize(quantization_config=quantization_config, save_directory=save_dir)
 

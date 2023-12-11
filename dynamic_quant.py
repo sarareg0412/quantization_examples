@@ -1,4 +1,6 @@
 import csv
+import os
+
 from utils import *
 import subprocess
 
@@ -23,14 +25,15 @@ for i in range(0, len(models), 50):
 
 # Quantize only the N_MODELS models of each category:
 for model_data in top_N_models:
-    n_experiment = 1
     model_name_formatted = model_data["model_name"].replace("/", "-")
 
     # The saving directory will be of the type models/computer-vision/model_name_formatted
     save_dir = "models/{}/{}".format(model_data["category"], model_name_formatted)
-    energy_output_file = "{}/energy_output_exp{}.csv".format(save_dir, n_experiment)
-    print("Start Quantization for model {}".format(model_data["model_name"]))
-    subprocess.run(["../energibridge", "-o", "{}".format(energy_output_file),
-                    "python", "run_energy.py", "{}".format(save_dir), "{}".format(model_data["library"]), "{}".format(model_data["model_name"])])
-    print("End Quantization for model {}, saved to {}".format(model_data["model_name"], save_dir))
-    n_experiment += 1
+    # Preliminary creation of the needed directories or the energibridge command won't find the output file
+    os.makedirs(save_dir, exist_ok=True)
+    for n_experiment in range(0, N_EXPERIMENTS):
+        energy_output_file = "{}/energy_output_exp{}".format(save_dir, n_experiment)
+        print("START QUANTIZATION FOR MODEL {} - EXP {}".format(model_data["model_name"], n_experiment))
+        subprocess.run(["../energibridge", "-o", "{}".format(energy_output_file),
+                        "python", "run_energy.py", "{}".format(save_dir), "{}".format(model_data["library"]), "{}".format(model_data["model_name"])])
+        print("END QUANTIZATION FOR MODEL {}".format(model_data["model_name"]))
