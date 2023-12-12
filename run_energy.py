@@ -1,6 +1,8 @@
 from neural_compressor.config import AccuracyCriterion, PostTrainingQuantConfig, TuningCriterion
 from optimum.intel.neural_compressor import INCQuantizer
 from transformers import AutoModel
+from sentence_transformers import SentenceTransformer
+from huggingface_hub import from_pretrained_keras
 
 import sys
 
@@ -15,12 +17,18 @@ quantization_config = PostTrainingQuantConfig(
 
 
 def run_quantization(save_dir, model_library, model_name):
-    model = None
     # Switch for the different kinds of libraries, only transformers is supported for now
-    if model_library == "transformers":
-        model = AutoModel.from_pretrained(model_name)
+    match model_library:
+        case "transformers":
+            model = AutoModel.from_pretrained(model_name)
+        case "sentence-similarity":
+            model = SentenceTransformer(model_name)
+        case "keras":
+            model = from_pretrained_keras(model_name)
+        case _:
+            model = None
     quantizer = INCQuantizer.from_pretrained(model=model)
-    # The directory where the quantized model will be savedcd
+    # The directory where the quantized model will be saved
     # Quantize and save the model
     quantizer.quantize(quantization_config=quantization_config, save_directory=save_dir)
 

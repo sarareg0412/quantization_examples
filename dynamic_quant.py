@@ -5,16 +5,22 @@ from utils import *
 import subprocess
 
 
+def get_models_from_csv(category):
+    filename = "../models_csv/{}".format(csv_name)
+    if category is not None:
+        filename = "../models_csv/{}_{}".format(category, csv_name)
+    with open(filename) as file:
+        csvReader = csv.reader(file)
+        # ['model_name', 'likes', 'downloads', 'category', 'task', 'library', 'dataset', 'dataset_config_name']
+        header = csvReader.__next__()
+        for line in csvReader:
+            models.append({header[i]: line[i] for i in range(len(line))})
 
-models = []
-# Load model and dataset from csv file
+    return models
 
-with open("../models_csv/computer-vision_{}".format(csv_name)) as file:
-    csvReader = csv.reader(file)
-    # ['model_name', 'likes', 'downloads', 'category', 'task', 'library', 'dataset', 'dataset_config_name']
-    header = csvReader.__next__()
-    for line in csvReader:
-        models.append({header[i]: line[i] for i in range(len(line))})
+
+# Load models from csv file
+models = get_models_from_csv(None)
 
 
 # Get the first 5 elements, every 50 elements
@@ -34,6 +40,6 @@ for model_data in top_N_models:
     for n_experiment in range(0, N_EXPERIMENTS):
         energy_output_file = "{}/energy_output_exp{}".format(save_dir, n_experiment)
         print("START QUANTIZATION FOR MODEL {} - EXP {}".format(model_data["model_name"], n_experiment))
-        subprocess.run(["../energibridge", "-o", "{}".format(energy_output_file),
+        subprocess.run(["../energibridge", "-o", "{}".format(energy_output_file), "-s", ";"
                         "python", "run_energy.py", "{}".format(save_dir), "{}".format(model_data["library"]), "{}".format(model_data["model_name"])])
         print("END QUANTIZATION FOR MODEL {}".format(model_data["model_name"]))
