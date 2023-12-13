@@ -102,6 +102,3 @@ def generate_metric_charts(model_name: str, workloads: [str]):
 
     plot.get_figure().savefig(os.path.join(f"{os_names[model_name]}.pdf"))
     plt.show()
-
-
-generate_metric_charts("linux", ["chrome", "idle"])

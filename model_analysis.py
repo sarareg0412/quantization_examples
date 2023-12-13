@@ -130,7 +130,7 @@ def create_csv(models_list, category):
 
 
 def create_categories_csv():
-    for i in range(0,N_CATEGORIES):
+    for i in range(4,N_CATEGORIES):
         # We get the list of top models for a list of tasks of the same category.
         category = categories[i]
         print("Get top {} models of category {}".format(N_MODELS, category))
