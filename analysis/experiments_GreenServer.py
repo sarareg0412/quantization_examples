@@ -71,11 +71,14 @@ def evaluate_and_measure_consumption(quantized):
                                                             model_name_formatted,
                                                             "Q_" if quantized else "",
                                                             n_experiment)
-        print("START EVALUATION FOR MODEL {} - EXP {}".format(model_data["model_name"], n_experiment))
+        print("START EVALUATION FOR {} MODEL {} - EXP {}".format("QUANTIZED" if quantized else "",
+                                                                 model_data["model_name"], n_experiment))
         subprocess.run(["../energibridge", "-o", "{}".format(energy_output_file),
-                        "python", "run_inference.py", model_data["full_line"]])
-        print("END EVALUATION FOR MODEL {} - EXP {}".format(model_data["model_name"], n_experiment))
+                        "python", "run_inference.py", "{}".format(str(quantized)),
+                                                      "{}".format(model_data["full_line"])])
+        print("END EVALUATION FOR {} MODEL {} - EXP {}".format("QUANTIZED" if quantized else "",
+                                                               model_data["model_name"], n_experiment))
 
 
-quantize_and_measure_consumption()
+#quantize_and_measure_consumption()
 evaluate_and_measure_consumption(True)

@@ -9,9 +9,11 @@ import sys
 
 # Set up quantization configuration and the maximum number of trials to 10
 tuning_criterion = TuningCriterion(max_trials=10)
+accuracy_criterion = AccuracyCriterion(tolerable_loss=0.05)
 # Load the quantization configuration detailing the quantization we wish to apply
 quantization_config = PostTrainingQuantConfig(
     approach="dynamic",  # Change as wished
+    accuracy_criterion=accuracy_criterion,
     tuning_criterion=tuning_criterion,
 )
 

@@ -1,15 +1,15 @@
-import os
 from functools import reduce
-
 
 import pandas as pd
 import matplotlib.pyplot as plt
 import os
-import seaborn as sns; sns.set()
+import seaborn as sns;
+
+sns.set()
 import numpy as np
-
-
 import torch
+
+from transformers import AutoModelForImageClassification
 
 N_CATEGORIES = 6
 # The dictionary has categories as keys and the list of tasks associated with them as values.
@@ -43,7 +43,7 @@ N_EXPERIMENTS = 5
 
 def print_size_of_model(model):
     torch.save(model.state_dict(), "temp.p")
-    print('Size (MB):', os.path.getsize("temp.p")/1e6)
+    print('Size (MB):', os.path.getsize("temp.p") / 1e6)
     os.remove('temp.p')
 
 
@@ -96,4 +96,13 @@ def generate_metric_charts(path: str, model_name, workloads: [str]):
         plot.set_title(title)
 
     plot.get_figure().savefig(os.path.join(f"{path}/{title}"))
-    #plt.show()
+    # plt.show()
+
+
+def get_model_from_task(task, model_location):
+    model = None
+    match task:
+        case "image-classification":
+            model = AutoModelForImageClassification.from_pretrained(model_location)
+
+    return model
