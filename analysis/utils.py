@@ -35,9 +35,11 @@ category_dict = {"multi-modal": ["feature-extraction", "text-to-image", "image-t
 categories = ["multi-modal", "computer-vision", "natural-language-processing", "audio", "tabular",
               "reinforcement-learning"]
 csv_name = "model_data.csv"
+csv_header = ['model_name', 'likes', 'downloads', 'category', 'task', 'library', 'dataset', 'dataset_config_name']
 N_MODELS = 5
 SIMPLE_FILTER = False
 N_EXPERIMENTS = 5
+
 
 def print_size_of_model(model):
     torch.save(model.state_dict(), "temp.p")
@@ -49,31 +51,23 @@ def reduce_to_1D_list(list):
     return reduce(lambda x, y: x + y, list, [])
 
 
-os_names = {
-    "darwin": "Mac",
-    "darwin-arm": "Mac ARM",
-    "darwin-intel": "Mac Intel",
-    "linux": "Linux",
-    "win32": "Windows"
-}
+def format_name(name):
+    return name.replace("/", "-")
 
 
-def generate_metric_charts(model_name: str, workloads: [str]):
+def generate_metric_charts(path: str, model_name, workloads: [str]):
     fig, ax = plt.subplots(figsize=[5, 3])
     ax.set_ylim(0, 60)
     ax.set_xlim(0, 100)
 
-    model_path = os.path.join(os.getcwd(), "results")
-    #for model in os.listdir(platform_path):
     for workload in workloads:
         all_data = []
-        execution_path = model_path #os.path.join(model_path, date, workload)
-        if not os.path.isdir(execution_path):
+        if not os.path.isdir(path):
             continue
-        for csv_file in os.listdir(execution_path):
+        for csv_file in os.listdir(path):
             if not csv_file.endswith(".csv"):
                 continue
-            df = pd.read_csv(os.path.join(execution_path, csv_file))
+            df = pd.read_csv(os.path.join(path, csv_file))
             key = "PACAKGE_ENERGY (W)"
             if "CPU_ENERGY (J)" in df.columns:
                 key = "CPU_ENERGY (J)"
@@ -90,7 +84,7 @@ def generate_metric_charts(model_name: str, workloads: [str]):
                         data[i] = (data[i] - df[key + "_original"][i - 1]) * (1000 / df["Delta"][i])
                     else:
                         data[i] = 0
-            # data = data[1:-1]
+            # data = data[1:-1] # take out first experiment
             for i in range(0, len(data)):
                 all_data.append({"Time": i, "CPU_POWER (Watts)": data[i]})
 
@@ -98,7 +92,8 @@ def generate_metric_charts(model_name: str, workloads: [str]):
                             errorbar=lambda x: (np.quantile(x, 0.25), np.quantile(x, 0.75)), ax=ax, legend=True,
                             label=workload.title())
         plot.set(xlabel=None, ylabel=None)
-        plot.set_title(os_names[model_name])
+        title = f"{model_name}_energy_data_plot.pdf"
+        plot.set_title(title)
 
-    plot.get_figure().savefig(os.path.join(f"{os_names[model_name]}.pdf"))
-    plt.show()
+    plot.get_figure().savefig(os.path.join(f"{path}/{title}"))
+    #plt.show()

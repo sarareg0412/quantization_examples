@@ -124,7 +124,7 @@ def create_csv(models_list, category):
     with open(csv_file, mode='w', newline='') as file:
         writer = csv.writer(file)
         # Write the header
-        writer.writerow(['model_name', 'likes', 'downloads', 'category', 'task', 'library', 'dataset', 'dataset_config_name'])
+        writer.writerow(csv_header)
         # Write the remaining rows
         writer.writerows(models_list)
 
