@@ -3,7 +3,7 @@ import sys
 
 from utils import *
 from transformers import pipeline
-from datasets import load_dataset
+from datasets import load_dataset, load_metric
 import evaluate
 from transformers import AutoImageProcessor
 from sentence_transformers import SentenceTransformer
@@ -45,7 +45,7 @@ def run_evaluation_from_line(quantized, line):
             processor = None
 
     pipe = pipeline(model_data["task"], model=model, image_processor=processor)
-    acc = evaluate.load("accuracy")
+    acc = load_metric("accuracy")
     # Initialize lists to store references and predictions for accuracy evaluation
     references = []
     predictions = []
@@ -56,11 +56,12 @@ def run_evaluation_from_line(quantized, line):
         object = example[data.column_names[0]]  # Assume the object column name is the first one
         label = example[data.column_names[-1]]  # Assume the label column name is the last one
 
-        # Classify the image using the classification model
+        # Infer the object label using the model
         prediction = pipe(object)
 
         # Assuming 'prediction' contains class probabilities or labels
-        predicted_label = prediction[0]['label'] if isinstance(prediction, list) else prediction['label']
+        predicted_label = prediction[0][data.column_names[-1]] if isinstance(prediction, list) \
+                                                               else prediction[data.column_names[-1]]
 
         # Append ground truth label and predicted label for accuracy evaluation
         references.append(label)
