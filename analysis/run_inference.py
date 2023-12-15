@@ -4,8 +4,7 @@ import sys
 from utils import *
 from transformers import pipeline
 from datasets import load_dataset
-from evaluate import evaluator
-
+import evaluate
 from transformers import AutoImageProcessor
 from sentence_transformers import SentenceTransformer
 from huggingface_hub import from_pretrained_keras
@@ -18,7 +17,6 @@ def run_evaluation_from_line(quantized, line):
     line = line.split(",")
     model_data = {model_data_names[i]: line[i] for i in range(len(line))}
     data = load_dataset(model_data["dataset"], model_data["dataset_config_name"], split="test").shuffle(seed=42)
-    task_evaluator = evaluator(model_data["task"])
 
     quantized = True if (quantized == "True") else False
     # The quantized model is located in the directory like: ./category/model_name_formatted/config
@@ -46,17 +44,32 @@ def run_evaluation_from_line(quantized, line):
         case _:
             processor = None
 
-    # Evaluate the model (performs inference too)
-    eval_results = task_evaluator.compute(
-        model_or_pipeline=model,
-        data=data,
-        label_column=data.column_names[-1],  # We assume the last column is the labels one
-        feature_extractor=processor,
-        tokenizer=processor,
-        label_mapping=model.config.label2id     # doesn't work without it, supposedly it's different per each dataset
-    )
-    print(eval_results)
+    pipe = pipeline(model_data["task"], model=model, image_processor=processor)
+    acc = evaluate.load("accuracy")
+    # Initialize lists to store references and predictions for accuracy evaluation
+    references = []
+    predictions = []
 
+    # Iterate through the validation set or any other split
+    for example in data:
+        # Load object and label truth label from the dataset
+        object = example[data.column_names[0]]  # Assume the object column name is the first one
+        label = example[data.column_names[-1]]  # Assume the label column name is the last one
+
+        # Classify the image using the classification model
+        prediction = pipe(object)
+
+        # Assuming 'prediction' contains class probabilities or labels
+        predicted_label = prediction[0]['label'] if isinstance(prediction, list) else prediction['label']
+
+        # Append ground truth label and predicted label for accuracy evaluation
+        references.append(label)
+        predictions.append(predicted_label)
+
+    # Calculate accuracy using the loaded accuracy metric
+    accuracy_score = acc.compute(predictions=predictions, references=references)
+
+    print(f"Inference accuracy is : {accuracy_score}")
 
 if __name__ == "__main__":
     run_evaluation_from_line(sys.argv[1], sys.argv[2])

@@ -9,7 +9,7 @@ sns.set()
 import numpy as np
 import torch
 
-from transformers import AutoModelForImageClassification
+from transformers import AutoModelForImageClassification, AutoModelForImageSegmentation
 
 N_CATEGORIES = 6
 # The dictionary has categories as keys and the list of tasks associated with them as values.
@@ -104,5 +104,7 @@ def get_model_from_task(task, model_location):
     match task:
         case "image-classification":
             model = AutoModelForImageClassification.from_pretrained(model_location)
+        case "image-segmentation":
+            model = AutoModelForImageSegmentation.from_pretrained(model_location)
 
     return model
