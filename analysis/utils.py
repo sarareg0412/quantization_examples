@@ -9,7 +9,11 @@ sns.set()
 import numpy as np
 import torch
 
-from transformers import AutoModelForImageClassification, AutoModelForImageSegmentation
+from transformers import AutoModelForImageClassification, SegformerForSemanticSegmentation
+from sentence_transformers import SentenceTransformer
+from huggingface_hub import from_pretrained_keras
+
+from transformers import AutoImageProcessor
 
 N_CATEGORIES = 6
 # The dictionary has categories as keys and the list of tasks associated with them as values.
@@ -39,6 +43,7 @@ csv_header = ['model_name', 'likes', 'downloads', 'category', 'task', 'library',
 N_MODELS = 5
 SIMPLE_FILTER = False
 N_EXPERIMENTS = 5
+SEED = 42
 
 
 def print_size_of_model(model):
@@ -105,6 +110,36 @@ def get_model_from_task(task, model_location):
         case "image-classification":
             model = AutoModelForImageClassification.from_pretrained(model_location)
         case "image-segmentation":
-            model = AutoModelForImageSegmentation.from_pretrained(model_location)
+            model = SegformerForSemanticSegmentation.from_pretrained(model_location)
 
     return model
+
+def get_model_from_library(library, task, model_path):
+    model = None
+    # Switch to retrieve the model class from the different kinds of libraries
+    match library:
+        case "transformers":
+            model = get_model_from_task(task, model_path)
+        case "sentence-similarity":
+            model = SentenceTransformer(model_path)
+        case "keras":
+            model = from_pretrained_keras(model_path)
+        case _:
+            model = None
+    return model
+
+def get_quantized_model_path(category, model_name):
+    # The quantized model is located in the directory like: ./category/model_name_formatted/config
+    return os.path.join(os.getcwd(), category, format_name(model_name), "config")
+
+
+def get_processor_from_category(category, model_name):
+    processor = None
+    match category:
+        case "computer-vision":
+            processor = AutoImageProcessor.from_pretrained(model_name)
+        case _:
+            processor = None
+
+
+    return processor
