@@ -3,6 +3,7 @@ import evaluate
 from utils import *
 from transformers import pipeline
 from datasets import load_dataset
+from tqdm import contrib
 
 exact_match = evaluate.load("exact_match", module_type="comparison")
 
@@ -24,8 +25,9 @@ def run_comparison(model_data):
     nq_predictions = []
     q_predictions = []
 
-    # Iterate through the validation set or any other split
-    for example in data:
+    print("Evaluating Data")
+    # Iterate through the test split
+    for i,example in contrib.tenumerate(data):
         # Load object and label truth label from the dataset
         object = example[data.column_names[0]]  # Assume the object column name is the first one
         label = example[data.column_names[-1]]  # Assume the label column name is the last one

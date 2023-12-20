@@ -2,10 +2,12 @@ import os
 import sys
 from builtins import range
 
+import tqdm.contrib
+
 from utils import *
 from transformers import pipeline
 from datasets import load_dataset
-import evaluate
+from tqdm import contrib
 from evaluate import evaluator
 
 
@@ -47,16 +49,15 @@ def run_evaluation_from_line(quantized, line):
         references = []
         predictions = []
 
+        print("PERFORMING INFERENCE")
         # Iterate through the validation set or any other split
-        for i, example in enumerate(data):
+        for i, example in contrib.tenumerate(data):
             # Load object and label truth label from the dataset
             object = example[data.column_names[0]]  # Assume the object column name is the first one
             label = example[data.column_names[-1]]  # Assume the label column name is the last one
 
             # Infer the object label using the model
             prediction = pipe(object)
-            if i%50 == 0:
-                print(f"INFERENCE Iteration {i}")
 
             # Since there might be multiple labels with multiple scores associated, we get the first one.
             predicted_label = prediction[0]['label'] if isinstance(prediction, list) \
