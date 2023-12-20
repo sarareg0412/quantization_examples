@@ -3,7 +3,7 @@ import os
 
 from utils import *
 import subprocess
-
+from run_comparison import run_comparison
 
 def get_models_from_csv(category):
     models = []
@@ -53,7 +53,7 @@ def quantize_and_measure_consumption():
         print("END QUANTIZATION FOR MODEL {} - EXP {}".format(model_data["model_name"], n_experiment))
 
 
-def evaluate_and_measure_consumption(quantized):
+def infer_and_measure_consumption(quantized):
     # Load models from csv file
     top_N_models = get_models_from_csv("computer-vision")
     model_data = top_N_models[3]    # beans model
@@ -71,14 +71,22 @@ def evaluate_and_measure_consumption(quantized):
                                                             model_name_formatted,
                                                             "Q_" if quantized else "",
                                                             n_experiment)
-        print("START EVALUATION FOR {}MODEL {} - EXP {}".format("QUANTIZED " if quantized else "",
+        print("START INFERENCE FOR {}MODEL {} - EXP {}".format("QUANTIZED " if quantized else "",
                                                                 model_data["model_name"], n_experiment))
         subprocess.run(["../energibridge", "-o", "{}".format(energy_output_file),
                         "python", "run_inference.py", "{}".format(str(quantized)),
                         "{}".format(model_data["full_line"])])
-        print("END EVALUATION FOR {}MODEL {} - EXP {}".format("QUANTIZED " if quantized else "",
+        print("END INFERENCE FOR {}MODEL {} - EXP {}".format("QUANTIZED " if quantized else "",
                                                               model_data["model_name"], n_experiment))
 
 
+def compare_models():
+    # Load models from csv file
+    top_N_models = get_models_from_csv("computer-vision")
+    model_data = top_N_models[3]  # beans model
+    #for n_experiment in range(0, N_EXPERIMENTS + 1):
+    run_comparison(model_data)
+
 #quantize_and_measure_consumption()
-evaluate_and_measure_consumption(True)
+#infer_and_measure_consumption(True)
+compare_models()

@@ -6,22 +6,18 @@ from datasets import load_dataset
 
 exact_match = evaluate.load("exact_match", module_type="comparison")
 
-def run_comparison(line):
-    # ['model_name', 'likes', 'downloads', 'category', 'task', 'library', 'dataset', 'dataset_config_name']
-    model_data_names = csv_header
-    model_data_names.append("full_line")
-    line = line.split(",")
-    model_data = {model_data_names[i]: line[i] for i in range(len(line))}
+def run_comparison(model_data):
     data = (load_dataset(model_data["dataset"], model_data["dataset_config_name"], split="test"))
     data = data.train_test_split(train_size=0.5, seed=SEED)["test"]  # Use 50% of test dataset to run comparison
 
     # Get processor (image processor, tokenizer etc.)
     processor = get_processor_from_category(model_data["category"], model_data["model_name"])
-    # Retrieve quantized model
+    # No need to retrieve the non quantized model as we only need its name to retrieve it from the hub
+    # Retrieve quantized model by its configuration.
     q_model = get_model_from_library(model_data["library"], model_data["task"],
                                      get_quantized_model_path(model_data["category"], model_data["model_name"]))
+    # Setup non quantized and quantized model pipeline for inference
     nq_pipe = pipeline(model_data["task"], model=model_data["model_name"], image_processor=processor)
-    # Quantized model pipeline for inference
     q_pipe = pipeline(model_data["task"], model=q_model, image_processor=processor)
     # Initialize lists to store references and predictions for accuracy evaluation
     references = []
@@ -36,17 +32,19 @@ def run_comparison(line):
 
         # Infer the object label using the model
         nq_prediction = nq_pipe(object)
-
+        q_prediction = q_pipe(object)
         # Since there might be multiple labels with multiple scores associated, we get the first one.
-        predicted_label = prediction[0]['label'] if isinstance(prediction, list) \
-            else prediction['label']
+        nq_label = nq_prediction[0]['label'] if isinstance(nq_prediction, list) \
+            else nq_prediction['label']
+        q_label = q_prediction[0]['label'] if isinstance(q_prediction, list) \
+            else q_prediction['label']
 
         # Append ground truth label and predicted label for accuracy evaluation
         references.append(label)
-        predictions.append(
-            model.config.label2id[predicted_label])  # Map the predicted label using the model's label2id attribute
+        nq_predictions.append(q_model.config.label2id[nq_label])  # Map the NQ predicted label using the q model's label2id attribute
+        q_predictions.append(q_model.config.label2id[q_label])    # Map the Q predicted label using the q model's label2id attribute
 
     # Calculate accuracy using the loaded accuracy metric
-    accuracy_score = exact_match.compute(predictions1=nq_predictions, predictions2=q_predictions, references=references)
+    exact_match_score = exact_match.compute(predictions1=nq_predictions, predictions2=q_predictions, references=references)
 
-    print(f"Inference accuracy is : {accuracy_score}")
+    print(f"Exact match score is : {exact_match_score}")
