@@ -9,11 +9,11 @@ sns.set()
 import numpy as np
 import torch
 
-from transformers import AutoModelForImageClassification, SegformerForSemanticSegmentation
+from datasets import load_dataset
+
+from transformers import AutoModelForImageClassification, SegformerForSemanticSegmentation, AutoImageProcessor
 from sentence_transformers import SentenceTransformer
 from huggingface_hub import from_pretrained_keras
-
-from transformers import AutoImageProcessor
 
 N_CATEGORIES = 6
 # The dictionary has categories as keys and the list of tasks associated with them as values.
@@ -44,6 +44,7 @@ N_MODELS = 5
 SIMPLE_FILTER = False
 N_EXPERIMENTS = 5
 SEED = 42
+QUANT_SPLIT_PERCENT = 0.2   # Quantization split percentage
 
 
 def print_size_of_model(model):
@@ -143,3 +144,18 @@ def get_processor_from_category(category, model_name):
 
 
     return processor
+
+
+def get_model_data_from_line(line):
+    # ['model_name', 'likes', 'downloads', 'category', 'task', 'library', 'dataset', 'dataset_config_name']
+    model_data_names = csv_header
+    model_data_names.append("full_line")
+    line = line.split(",")
+    model_data = {model_data_names[i]: line[i] for i in range(len(line))}
+    return model_data
+
+
+def get_dataloader_from_dataset_name(ds_name, ds_config, percent):
+    data = (load_dataset(ds_name, ds_config, split="test"))
+    data = data.train_test_split(train_size=percent, seed=SEED)["train"]  # Use x% of test dataset
+    return data

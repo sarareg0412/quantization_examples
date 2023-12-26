@@ -1,9 +1,3 @@
-import os
-import sys
-from builtins import range
-
-import tqdm.contrib
-
 from utils import *
 from transformers import pipeline
 from datasets import load_dataset
@@ -12,11 +6,7 @@ from evaluate import evaluator
 
 
 def run_evaluation_from_line(quantized, line):
-    # ['model_name', 'likes', 'downloads', 'category', 'task', 'library', 'dataset', 'dataset_config_name']
-    model_data_names = csv_header
-    model_data_names.append("full_line")
-    line = line.split(",")
-    model_data = {model_data_names[i]: line[i] for i in range(len(line))}
+    model_data = get_model_data_from_line(line)
     data = (load_dataset(model_data["dataset"], model_data["dataset_config_name"], split="test"))
     data = data.train_test_split(train_size=0.5, seed=SEED)["train"]  # Use 50% of test dataset to make inference
 
