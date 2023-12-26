@@ -43,4 +43,4 @@ def run_quantization(save_dir, line):
 
 
 if __name__ == "__main__":
-    run_quantization(sys.argv[1], sys.argv[2], sys.argv[3])
+    run_quantization(sys.argv[1], sys.argv[2])
