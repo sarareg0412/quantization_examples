@@ -156,7 +156,7 @@ def get_model_data_from_line(line):
     return model_data
 
 
-def get_dataloader_from_dataset_name(ds_name, ds_config, percent):
+def get_dataset_from_name(ds_name, ds_config, percent):
     data = (load_dataset(ds_name, ds_config, split="test"))
     data = data.train_test_split(train_size=percent, seed=SEED)["train"]  # Use x% of test dataset
     return data

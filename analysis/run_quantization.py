@@ -34,18 +34,14 @@ def run_quantization(save_dir, line):
         case _:
             model = None
 
-    dataloader = get_dataloader_from_dataset_name(model_data["dataset"], model_data["dataset_config_name"], QUANT_SPLIT_PERCENT)
+    dataset = get_dataset_from_name(model_data["dataset"], model_data["dataset_config_name"], QUANT_SPLIT_PERCENT)
     # TODO add specific metric
-    quantizer = INCQuantizer.from_pretrained(model=model
-                                             #eval_fn=eval_func(model=model, dataset=dataloader, metric=evaluate.load("accuracy")))
+    quantizer = INCQuantizer.from_pretrained(model=model,
+                                             eval_fn=eval_func(dataset=dataset)
                                              )
-    calib_dataset = quantizer.get_calibration_dataset(dataset_name=model_data["dataset"],
-                                                      dataset_config_name=model_data["dataset_config_name"],
-                                                      dataset_split="test"
-                                                      )
     # The directory where the quantized model will be saved
     # Quantize and save the model
-    quantizer.quantize(quantization_config=quantization_config, save_directory=save_dir, calibration_dataset=calib_dataset)
+    quantizer.quantize(quantization_config=quantization_config, save_directory=save_dir)
 
 
 if __name__ == "__main__":

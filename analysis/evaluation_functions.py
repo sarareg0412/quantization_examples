@@ -25,22 +25,16 @@ def eval_func_with_metric(model, dataset, metric):
     return accuracy
 
 
-def eval_func(line, dataset, model_path):
-    model_data = get_model_data_from_line(line)
-    data = dataset.train_test_split(train_size=0.5, seed=SEED)["test"]  # Use 50% of test dataset to run comparison
-
-    # Get processor (image processor, tokenizer etc.)
-    processor = get_processor_from_category(model_data["category"], model_data["model_name"])
-    model = get_model_from_library(model_data["library"], model_data["task"], model_path)
-    pipe = pipeline(model_data["task"], model=model, image_processor=processor)
+def eval_func(model, dataset):
+    pipe = pipeline(model=model)
     # Initialize lists to store references and predictions for accuracy evaluation
     references = []
     predictions = []
     # Iterate through the test split
-    for object in data:
+    for object in dataset:
         # Load object and label truth label from the dataset
-        object = object[data.column_names[0]]  # Assume the object column name is the first one
-        label = object[data.column_names[-1]]  # Assume the label column name is the last one
+        object = object[dataset.column_names[0]]  # Assume the object column name is the first one
+        label = object[dataset.column_names[-1]]  # Assume the label column name is the last one
 
         # Infer the object label using the model
         prediction = pipe(object)
