@@ -25,7 +25,7 @@ def run_comparison(model_data):
     nq_predictions = []
     q_predictions = []
 
-    print("Evaluating Data")
+    print(f"Evaluating Data for model {model_data['model_name']}")
     # Iterate through the test split
     for i,example in contrib.tenumerate(data):
         # Load object and label truth label from the dataset

@@ -129,6 +129,7 @@ def get_model_from_library(library, task, model_path):
             model = None
     return model
 
+
 def get_quantized_model_path(category, model_name):
     # The quantized model is located in the directory like: ./category/model_name_formatted/config
     return os.path.join(os.getcwd(), category, format_name(model_name), "config")
