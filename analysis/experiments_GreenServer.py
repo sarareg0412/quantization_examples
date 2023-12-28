@@ -4,33 +4,30 @@ import os
 from utils import *
 import subprocess
 from run_comparison import run_comparison
+from run_quantization import run_quantization
 
-def get_models_from_csv(category):
-    models = []
+DEBUG = False
+
+def get_models_line_from_csv(category):
     filename = "../models_csv/{}".format(csv_name)
     if category is not None:
         filename = "../models_csv/{}_{}".format(category, csv_name)
     with open(filename) as file:
         csvReader = csv.reader(file)
         # ['model_name', 'likes', 'downloads', 'category', 'task', 'library', 'dataset', 'dataset_config_name']
-        header = csvReader.__next__()
+        csvReader.__next__()        # Skip header
         # choose the first 5 lines out of every 50 lines of the file
-        lines = [line for i, line in enumerate(csvReader) if i % 50 <5]
+        lines = [",".join(line) for i, line in enumerate(csvReader) if i % 50 <5]
 
-        for line in lines:
-            data = {header[i]: line[i] for i in range(len(line))}
-            # The model also has the "full_line" attribute which is the line read from the csv file
-            data["full_line"] = ','.join(line)
-            models.append(data)
-
-    return models
+    return lines
 
 
 def quantize_and_measure_consumption():
     # Load models from csv file
-    top_N_models = get_models_from_csv("computer-vision")
+    top_N_models = get_models_line_from_csv("computer-vision")
 
-    model_data = top_N_models[3]    # beans model
+    line = top_N_models[3]    # beans model
+    model_data = get_model_data_from_line(line)
 
     model_name_formatted = format_name(model_data["model_name"])
 
@@ -46,16 +43,21 @@ def quantize_and_measure_consumption():
         # The output file will be named model-name-formatted_quant_exp0.csv
         energy_output_file = "{}/{}_quant_exp{}.csv".format(save_energy_file_dir, model_name_formatted, n_experiment)
         print("START QUANTIZATION FOR MODEL {} - EXP {}".format(model_data["model_name"], n_experiment))
-        subprocess.run(["../energibridge", "-o", "{}".format(energy_output_file),
-                        "python", "run_quantization.py", "{}".format(save_model_dir),
-                                                         "{}".format(model_data["full_line"])])
+        if DEBUG:
+            run_quantization(energy_output_file, line)
+        else:
+            subprocess.run(["../energibridge", "-o", "{}".format(energy_output_file),
+                            "python", "run_quantization.py", "{}".format(save_model_dir),
+                                                             "{}".format(line)])
         print("END QUANTIZATION FOR MODEL {} - EXP {}".format(model_data["model_name"], n_experiment))
 
 
 def infer_and_measure_consumption(quantized):
     # Load models from csv file
-    top_N_models = get_models_from_csv("computer-vision")
-    model_data = top_N_models[3]    # beans model
+    top_N_models = get_models_line_from_csv("computer-vision")
+    line = top_N_models[3]    # beans model
+
+    model_data = get_model_data_from_line(line)
     model_name_formatted = format_name(model_data["model_name"])
     # The model's energy data files will be csv and in the directory following the naming convention like
     # ./computer-vision/model_name_formatted/inf_energy_data/quant or non_quant based on the quantized parameter
@@ -74,17 +76,20 @@ def infer_and_measure_consumption(quantized):
                                                                 model_data["model_name"], n_experiment))
         subprocess.run(["../energibridge", "-o", "{}".format(energy_output_file),
                         "python", "run_inference.py", "{}".format(str(quantized)),
-                        "{}".format(model_data["full_line"])])
+                        "{}".format(line)])
         print("END INFERENCE FOR {}MODEL {} - EXP {}".format("QUANTIZED " if quantized else "",
                                                               model_data["model_name"], n_experiment))
 
 
 def compare_models():
     # Load models from csv file
-    top_N_models = get_models_from_csv("computer-vision")
-    model_data = top_N_models[3]  # beans model
+    top_N_models = get_models_line_from_csv("computer-vision")
+    line = top_N_models[3]  # beans model
+    model_data = get_model_data_from_line(line)
     #for n_experiment in range(0, N_EXPERIMENTS + 1):
     run_comparison(model_data)
+
+
 
 quantize_and_measure_consumption()
 #infer_and_measure_consumption(True)
