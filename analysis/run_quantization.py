@@ -1,14 +1,12 @@
 import evaluate
 from neural_compressor.config import AccuracyCriterion, PostTrainingQuantConfig, TuningCriterion
 from optimum.intel.neural_compressor import INCQuantizer
-from transformers import AutoModel
-from sentence_transformers import SentenceTransformer
-from huggingface_hub import from_pretrained_keras
-from evaluation_functions import eval_func
+from transformers import AutoModel, pipeline
 from utils import *
 
 import sys
 
+dataset = get_dataset_from_name(sys.argv[3], sys.argv[4], QUANT_SPLIT_PERCENT)
 
 # Set up quantization configuration and the maximum number of trials to 10
 tuning_criterion = TuningCriterion(max_trials=10)
@@ -19,6 +17,32 @@ quantization_config = PostTrainingQuantConfig(
     accuracy_criterion=accuracy_criterion,
     tuning_criterion=tuning_criterion,
 )
+
+
+def eval_func(model):
+    pipe = pipeline(model=model)
+    # Initialize lists to store references and predictions for accuracy evaluation
+    references = []
+    predictions = []
+    # Iterate through the test split
+    for object in dataset:
+        # Load object and label truth label from the dataset
+        object = object[dataset.column_names[0]]  # Assume the object column name is the first one
+        label = object[dataset.column_names[-1]]  # Assume the label column name is the last one
+
+        # Infer the object label using the model
+        prediction = pipe(object)
+        # Since there might be multiple labels with multiple scores associated, we get the first one.
+        prediction = prediction[0]['label'] if isinstance(prediction, list) else prediction['label']
+
+        # Append ground truth label and predicted label for "accuracy" evaluation
+        references.append(label)
+        predictions.append(model.config.label2id[prediction])  # Map the predicted label using the model's label2id attribute
+
+    # Calculate accuracy using the loaded accuracy metric
+    exact_match = evaluate.load("exact_match")
+    exact_match_score = exact_match.compute(predictions=predictions, references=references)
+    return exact_match_score
 
 
 def run_quantization(save_dir, line):
@@ -33,11 +57,9 @@ def run_quantization(save_dir, line):
             model = from_pretrained_keras(model_data["model_name"])
         case _:
             model = None
-
-    dataset = get_dataset_from_name(model_data["dataset"], model_data["dataset_config_name"], QUANT_SPLIT_PERCENT)
     # TODO add specific metric
     quantizer = INCQuantizer.from_pretrained(model=model,
-                                             eval_fn=eval_func(dataset=dataset)
+                                             eval_fn=eval_func
                                              )
     # The directory where the quantized model will be saved
     # Quantize and save the model

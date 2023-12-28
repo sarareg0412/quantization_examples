@@ -48,7 +48,10 @@ def quantize_and_measure_consumption():
         else:
             subprocess.run(["../energibridge", "-o", "{}".format(energy_output_file),
                             "python", "run_quantization.py", "{}".format(save_model_dir),
-                                                             "{}".format(line)])
+                                                             "{}".format(line),
+                                                             "{}".format(model_data["dataset"]),
+                                                             "{}".format(model_data["dataset_config_name"]),
+                            ])
         print("END QUANTIZATION FOR MODEL {} - EXP {}".format(model_data["model_name"], n_experiment))
 
 
