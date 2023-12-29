@@ -6,7 +6,7 @@ from utils import *
 
 import sys
 
-dataset = get_dataset_from_name(sys.argv[3], sys.argv[4], QUANT_SPLIT_PERCENT)
+dataset = None
 
 # Set up quantization configuration and the maximum number of trials to 10
 tuning_criterion = TuningCriterion(max_trials=10)
@@ -20,6 +20,7 @@ quantization_config = PostTrainingQuantConfig(
 
 
 def eval_func(model):
+    print(f"EVAL_FN, DATASET = NONE IS {dataset is None}")
     pipe = pipeline(model=model)
     # Initialize lists to store references and predictions for accuracy evaluation
     references = []
@@ -67,4 +68,5 @@ def run_quantization(save_dir, line):
 
 
 if __name__ == "__main__":
+    dataset = get_dataset_from_name(sys.argv[3], sys.argv[4], QUANT_SPLIT_PERCENT)
     run_quantization(sys.argv[1], sys.argv[2])
