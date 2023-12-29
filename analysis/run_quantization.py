@@ -1,4 +1,4 @@
-import evaluate
+from evaluate import load, evaluator
 from neural_compressor.config import AccuracyCriterion, PostTrainingQuantConfig, TuningCriterion
 from optimum.intel.neural_compressor import INCQuantizer
 from transformers import AutoModel, pipeline
@@ -20,16 +20,24 @@ quantization_config = PostTrainingQuantConfig(
 
 
 def eval_func(model):
-    print(f"EVAL_FN, DATASET = NONE IS {dataset is None}")
-    pipe = pipeline(model=model)
+    # pipe = pipeline(
+    #    self.task,
+    #    model=model_or_pipeline,
+    #    tokenizer=tokenizer,
+    #    feature_extractor=feature_extractor,
+    #    device=device,
+    # )
+    processor = get_processor_from_category(model_data["category"], model_data["model_name"])
+    # TODO add tokenizer
+    pipe = pipeline(model_data["task"], model=model, feature_extractor=processor)
     # Initialize lists to store references and predictions for accuracy evaluation
     references = []
     predictions = []
     # Iterate through the test split
-    for object in dataset:
+    for data in dataset:
         # Load object and label truth label from the dataset
-        object = object[dataset.column_names[0]]  # Assume the object column name is the first one
-        label = object[dataset.column_names[-1]]  # Assume the label column name is the last one
+        object = data[dataset.column_names[0]]  # Assume the object column name is the first one
+        label = data[dataset.column_names[-1]]  # Assume the label column name is the last one
 
         # Infer the object label using the model
         prediction = pipe(object)
@@ -37,17 +45,16 @@ def eval_func(model):
         prediction = prediction[0]['label'] if isinstance(prediction, list) else prediction['label']
 
         # Append ground truth label and predicted label for "accuracy" evaluation
-        references.append(label)
+        references.append(str(label))
         predictions.append(model.config.label2id[prediction])  # Map the predicted label using the model's label2id attribute
 
     # Calculate accuracy using the loaded accuracy metric
-    exact_match = evaluate.load("exact_match")
+    exact_match = load("exact_match")
     exact_match_score = exact_match.compute(predictions=predictions, references=references)
-    return exact_match_score
+    return exact_match_score["exact_match"]
 
 
-def run_quantization(save_dir, line):
-    model_data = get_model_data_from_line(line)
+def run_quantization(save_dir):
     # Switch for the different kinds of libraries, only transformers is supported for now
     match model_data["library"]:
         case "transformers":
@@ -68,5 +75,6 @@ def run_quantization(save_dir, line):
 
 
 if __name__ == "__main__":
-    dataset = get_dataset_from_name(sys.argv[3], sys.argv[4], QUANT_SPLIT_PERCENT)
-    run_quantization(sys.argv[1], sys.argv[2])
+    model_data = get_model_data_from_line(sys.argv[2])
+    dataset = get_dataset_from_name(model_data["dataset"], model_data["dataset_config_name"], QUANT_SPLIT_PERCENT)
+    run_quantization(sys.argv[1])
