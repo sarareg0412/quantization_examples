@@ -17,7 +17,7 @@ def run_evaluation_from_line(quantized, line):
     if not quantized:
         model_path = model_data["model_name"]
 
-    model = get_model_from_library(model_data["library"], model_data["task"], model_path)
+    model = get_ORT_model_from_library(model_data["library"], model_data["task"], model_path)
     processor = get_processor_from_category(model_data["category"], model_data["model_name"])
 
     compute_accuracy = False

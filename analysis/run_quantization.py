@@ -3,7 +3,8 @@ from neural_compressor.config import AccuracyCriterion, PostTrainingQuantConfig,
 from optimum.intel.neural_compressor import INCQuantizer
 from transformers import AutoModelForImageClassification, pipeline
 from utils import *
-
+from optimum.onnxruntime import ORTQuantizer
+from optimum.onnxruntime.configuration import AutoQuantizationConfig
 import sys
 
 dataset = None
@@ -18,6 +19,7 @@ quantization_config = PostTrainingQuantConfig(
     tuning_criterion=tuning_criterion,
 )
 
+d_q_config = AutoQuantizationConfig.avx512_vnni(is_static=False, per_channel=False)
 
 def eval_func(model):
     # pipe = pipeline(
@@ -70,13 +72,15 @@ def eval_func2(model):
 
 def run_quantization(save_dir):
     # Switch for the different kinds of libraries, only transformers is supported for now
-    model = get_model_from_library(model_data["library"], model_data["task"], model_data["model_name"])
-    quantizer = INCQuantizer.from_pretrained(model=model,
-                                             eval_fn=eval_func
-                                             )
+    model = get_ORT_model_from_library(model_data["library"], model_data["task"], model_data["model_name"])
+    processor = get_extractor_from_category(model_data["category"], model_data["model_name"])
+    quantizer = ORTQuantizer.from_pretrained(model)
+    # skipping saving the onnx checkpoint and tokenizer
+    #model.save_pretrained(onnx_path)
+    #processor.save_pretrained(onnx_path)
     # The directory where the quantized model will be saved
     # Quantize and save the model
-    quantizer.quantize(quantization_config=quantization_config, save_directory=save_dir)
+    quantizer.quantize(quantization_config=d_q_config, save_dir=save_dir)
 
 
 if __name__ == "__main__":

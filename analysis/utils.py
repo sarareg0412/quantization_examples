@@ -10,8 +10,9 @@ import numpy as np
 import torch
 
 from datasets import load_dataset
-
-from transformers import AutoModelForImageClassification, SegformerForSemanticSegmentation, AutoImageProcessor
+from optimum.onnxruntime import ORTModelForImageClassification
+from transformers import AutoModelForImageClassification, SegformerForSemanticSegmentation, AutoImageProcessor, \
+    AutoFeatureExtractor
 from sentence_transformers import SentenceTransformer
 from huggingface_hub import from_pretrained_keras
 from quantized_classes import get_quantized_model_from_task
@@ -110,22 +111,19 @@ def get_model_from_task(task, model_location):
     model = None
     match task:
         case "image-classification":
-            model = AutoModelForImageClassification.from_pretrained(model_location)
+            model = ORTModelForImageClassification.from_pretrained(model_location)
         case "image-segmentation":
             model = SegformerForSemanticSegmentation.from_pretrained(model_location)
 
     return model
 
 
-def get_model_from_library(library, task, model_path, quantized=False):
+def get_ORT_model_from_library(library, task, model_path):
     model = None
     # Switch to retrieve the model class from the different kinds of libraries
     match library:
         case "transformers":
-            if quantized:
-                model = get_quantized_model_from_task(task, model_path)
-            else:
-                model = get_model_from_task(task, model_path)
+            model = get_model_from_task(task, model_path)
         case "sentence-similarity":
             model = SentenceTransformer(model_path)
         case "keras":
@@ -145,6 +143,17 @@ def get_processor_from_category(category, model_name):
     match category:
         case "computer-vision":
             processor = AutoImageProcessor.from_pretrained(model_name)
+        case _:
+            processor = None
+
+    return processor
+
+def get_extractor_from_category(category, model_name):
+    processor = None
+    match category:
+        case "computer-vision":
+            processor = AutoFeatureExtractor.from_pretrained(model_name)
+
         case _:
             processor = None
 
