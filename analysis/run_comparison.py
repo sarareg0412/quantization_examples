@@ -18,8 +18,8 @@ def run_comparison(model_data):
     nq_model = get_ORT_model_from_library(model_data["library"], model_data["task"], model_data["model_name"])
     q_model = get_ORT_model_from_library(model_data["library"], model_data["task"],
                                          get_quantized_model_path(model_data["category"], model_data["model_name"]),
-                                         )
-    # Setup non quantized and quantized model pipeline for inference
+                                         quantized=True)
+    # Setup non quantized and quantized model pipeline for inferencecd
     nq_pipe = pipeline(model_data["task"], model=nq_model, image_processor=processor)
     q_pipe = pipeline(model_data["task"], model=q_model, image_processor=processor)
     # Initialize lists to store references and predictions for accuracy evaluation

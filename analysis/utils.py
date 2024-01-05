@@ -15,7 +15,6 @@ from transformers import AutoModelForImageClassification, SegformerForSemanticSe
     AutoFeatureExtractor
 from sentence_transformers import SentenceTransformer
 from huggingface_hub import from_pretrained_keras
-from quantized_classes import get_quantized_model_from_task
 
 N_CATEGORIES = 6
 # The dictionary has categories as keys and the list of tasks associated with them as values.
@@ -111,19 +110,33 @@ def get_model_from_task(task, model_location):
     model = None
     match task:
         case "image-classification":
-            model = ORTModelForImageClassification.from_pretrained(model_location)
+            model = ORTModelForImageClassification.from_pretrained(model_location, export=True)
         case "image-segmentation":
             model = SegformerForSemanticSegmentation.from_pretrained(model_location)
 
     return model
 
 
-def get_ORT_model_from_library(library, task, model_path):
+def get_quantized_model_from_task(task, model_location):
+    model = None
+    match task:
+        case "image-classification":
+            model = ORTModelForImageClassification.from_pretrained(model_location, file_name="model_quantized.onnx")
+        case "image-segmentation":
+            model = SegformerForSemanticSegmentation.from_pretrained(model_location)
+
+    return model
+
+
+def get_ORT_model_from_library(library, task, model_path, quantized= False):
     model = None
     # Switch to retrieve the model class from the different kinds of libraries
     match library:
         case "transformers":
-            model = get_model_from_task(task, model_path)
+            if quantized:
+                model = get_quantized_model_from_task(task, model_path)
+            else:
+                model = get_model_from_task(task, model_path)
         case "sentence-similarity":
             model = SentenceTransformer(model_path)
         case "keras":
