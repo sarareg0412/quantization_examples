@@ -16,7 +16,8 @@ def run_comparison(model_data):
     # No need to retrieve the non quantized model as we only need its name to retrieve it from the hub
     # Retrieve quantized model by its configuration.
     q_model = get_model_from_library(model_data["library"], model_data["task"],
-                                     get_quantized_model_path(model_data["category"], model_data["model_name"]))
+                                     get_quantized_model_path(model_data["category"], model_data["model_name"]),
+                                     quantized=True)
     # Setup non quantized and quantized model pipeline for inference
     nq_pipe = pipeline(model_data["task"], model=model_data["model_name"], image_processor=processor)
     q_pipe = pipeline(model_data["task"], model=q_model, image_processor=processor)
@@ -29,7 +30,7 @@ def run_comparison(model_data):
     # Iterate through the test split
     for i,example in contrib.tenumerate(data):
         # Load object and label truth label from the dataset
-        object = example[data.column_names[0]]  # Assume the object column name is the first one
+        object = example[data.column_names[1]]  # Assume the object column name is the first one
         label = example[data.column_names[-1]]  # Assume the label column name is the last one
 
         # Infer the object label using the model

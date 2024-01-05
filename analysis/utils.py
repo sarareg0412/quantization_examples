@@ -14,6 +14,7 @@ from datasets import load_dataset
 from transformers import AutoModelForImageClassification, SegformerForSemanticSegmentation, AutoImageProcessor
 from sentence_transformers import SentenceTransformer
 from huggingface_hub import from_pretrained_keras
+from quantized_classes import get_quantized_model_from_task
 
 N_CATEGORIES = 6
 # The dictionary has categories as keys and the list of tasks associated with them as values.
@@ -44,7 +45,7 @@ N_MODELS = 5
 SIMPLE_FILTER = False
 N_EXPERIMENTS = 5
 SEED = 42
-QUANT_SPLIT_PERCENT = 0.2   # Quantization split percentage
+QUANT_SPLIT_PERCENT = 0.2  # Quantization split percentage
 
 
 def print_size_of_model(model):
@@ -115,12 +116,16 @@ def get_model_from_task(task, model_location):
 
     return model
 
-def get_model_from_library(library, task, model_path):
+
+def get_model_from_library(library, task, model_path, quantized=False):
     model = None
     # Switch to retrieve the model class from the different kinds of libraries
     match library:
         case "transformers":
-            model = get_model_from_task(task, model_path)
+            if quantized:
+                model = get_quantized_model_from_task(task, model_path)
+            else:
+                model = get_model_from_task(task, model_path)
         case "sentence-similarity":
             model = SentenceTransformer(model_path)
         case "keras":
@@ -142,7 +147,6 @@ def get_processor_from_category(category, model_name):
             processor = AutoImageProcessor.from_pretrained(model_name)
         case _:
             processor = None
-
 
     return processor
 

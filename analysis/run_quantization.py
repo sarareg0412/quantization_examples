@@ -19,7 +19,7 @@ quantization_config = PostTrainingQuantConfig(
 )
 
 
-def eval_func2(model):
+def eval_func(model):
     # pipe = pipeline(
     #    self.task,
     #    model=model_or_pipeline,
@@ -36,7 +36,7 @@ def eval_func2(model):
     # Iterate through the test split
     for data in dataset:
         # Load object and label truth label from the dataset
-        object = data[dataset.column_names[0]]  # Assume the object column name is the first one
+        object = data[dataset.column_names[1]]  # Assume the object column name is the first one
         label = data[dataset.column_names[-1]]  # Assume the label column name is the last one
 
         # Infer the object label using the model
@@ -54,7 +54,7 @@ def eval_func2(model):
     return exact_match_score["exact_match"]
 
 
-def eval_func(model):
+def eval_func2(model):
     task_evaluator = evaluator("image-classification")
     results = task_evaluator.compute(
         model_or_pipeline=model,
@@ -70,16 +70,7 @@ def eval_func(model):
 
 def run_quantization(save_dir):
     # Switch for the different kinds of libraries, only transformers is supported for now
-    match model_data["library"]:
-        case "transformers":
-            model = AutoModelForImageClassification.from_pretrained(model_data["model_name"])
-        case "sentence-similarity":
-            model = SentenceTransformer(model_data["model_name"])
-        case "keras":
-            model = from_pretrained_keras(model_data["model_name"])
-        case _:
-            model = None
-    # TODO add specific metric
+    model = get_model_from_library(model_data["library"], model_data["task"], model_data["model_name"])
     quantizer = INCQuantizer.from_pretrained(model=model,
                                              eval_fn=eval_func
                                              )
