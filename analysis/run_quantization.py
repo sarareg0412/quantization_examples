@@ -1,7 +1,7 @@
 from evaluate import load, evaluator
 from neural_compressor.config import AccuracyCriterion, PostTrainingQuantConfig, TuningCriterion
 from optimum.intel.neural_compressor import INCQuantizer
-from transformers import AutoModel, pipeline
+from transformers import AutoModelForImageClassification, pipeline
 from utils import *
 
 import sys
@@ -19,7 +19,7 @@ quantization_config = PostTrainingQuantConfig(
 )
 
 
-def eval_func(model):
+def eval_func2(model):
     # pipe = pipeline(
     #    self.task,
     #    model=model_or_pipeline,
@@ -54,11 +54,25 @@ def eval_func(model):
     return exact_match_score["exact_match"]
 
 
+def eval_func(model):
+    task_evaluator = evaluator("image-classification")
+    results = task_evaluator.compute(
+        model_or_pipeline=model,
+        feature_extractor=get_processor_from_category(model_data["category"], model_data["model_name"]),
+        data=dataset,
+        metric=load("accuracy"),
+        input_column=dataset.column_names[0],
+        label_column="labels",
+        label_mapping=model.config.label2id,
+    )
+    return results["accuracy"]
+
+
 def run_quantization(save_dir):
     # Switch for the different kinds of libraries, only transformers is supported for now
     match model_data["library"]:
         case "transformers":
-            model = AutoModel.from_pretrained(model_data["model_name"])
+            model = AutoModelForImageClassification.from_pretrained(model_data["model_name"])
         case "sentence-similarity":
             model = SentenceTransformer(model_data["model_name"])
         case "keras":
