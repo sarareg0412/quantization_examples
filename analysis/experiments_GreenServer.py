@@ -1,7 +1,6 @@
 import csv
 import os
-
-from utils import *
+from utils import csv_name, get_model_data_from_line,format_name,N_EXPERIMENTS
 import subprocess
 from run_comparison import run_comparison
 from run_quantization import run_quantization
@@ -67,6 +66,7 @@ def infer_and_measure_consumption(quantized):
                                                              "quant" if quantized else "non_quant")
     # Preliminary creation of the needed directory to save the output file, or the energibridge command won't work
     os.makedirs(save_energy_file_dir, exist_ok=True)
+
     for n_experiment in range(0, N_EXPERIMENTS + 1):
         # The output file will be named model-name-formatted_Q_inf_exp0.csv
         energy_output_file = "{}/{}_{}inf_exp{}.csv".format(save_energy_file_dir,
@@ -92,6 +92,6 @@ def compare_models():
 
 
 
-quantize_and_measure_consumption()
+#quantize_and_measure_consumption()
 #infer_and_measure_consumption(True)
-#compare_models()
+compare_models()

@@ -1,3 +1,6 @@
+from tqdm.auto import tqdm
+from transformers.pipelines.pt_utils import KeyDataset
+
 from utils import *
 from transformers import pipeline
 from datasets import load_dataset
@@ -17,7 +20,7 @@ def run_evaluation_from_line(quantized, line):
     if not quantized:
         model_path = model_data["model_name"]
 
-    model = get_ORT_model_from_library(model_data["library"], model_data["task"], model_path)
+    model = get_model_from_library(model_data["library"], model_data["task"], model_path)
     processor = get_processor_from_category(model_data["category"], model_data["model_name"])
 
     compute_accuracy = False
@@ -35,19 +38,28 @@ def run_evaluation_from_line(quantized, line):
         print(eval_results)
     else:
         pipe = pipeline(model_data["task"], model=model, image_processor=processor)
-        # Initialize lists to store references and predictions for accuracy evaluation
-        references = []
-        predictions = []
 
         print("PERFORMING INFERENCE")
+
+        # map the dataset to a list of PIL.Image for input to the pipeline
+        # pipe(inputs) should return a list of scores + labels
+
+        for out in tqdm(pipe(KeyDataset(data, "image"))):
+            print(out)
+        """
         # Iterate through the validation set or any other split
         for i, example in contrib.tenumerate(data):
             # Load object and label truth label from the dataset
-            object = example[data.column_names[0]]  # Assume the object column name is the first one
+            import pdb
+            pdb.set_trace()
+
+            object = example[data.column_names[1]]  # Assume the object column name is the first one
             label = example[data.column_names[-1]]  # Assume the label column name is the last one
 
             # Infer the object label using the model
             prediction = pipe(object)
+            prediction = model(object)
+
 
             # Since there might be multiple labels with multiple scores associated, we get the first one.
             predicted_label = prediction[0]['label'] if isinstance(prediction, list) \
@@ -56,8 +68,8 @@ def run_evaluation_from_line(quantized, line):
             # Append ground truth label and predicted label for accuracy evaluation
             references.append(label)
             predictions.append(model.config.label2id[predicted_label])  # Map the predicted label using the model's label2id attribute
-
+        """
 
 if __name__ == "__main__":
     #run_evaluation_from_line(sys.argv[1], sys.argv[2])
-    run_evaluation_from_line("True","nateraw/vit-base-beans,10,2023,computer-vision,image-classification,transformers,beans,")
+    run_evaluation_from_line("False","nateraw/vit-base-beans,10,2023,computer-vision,image-classification,transformers,beans,")

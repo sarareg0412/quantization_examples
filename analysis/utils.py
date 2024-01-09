@@ -10,11 +10,13 @@ import numpy as np
 import torch
 
 from datasets import load_dataset
-from optimum.onnxruntime import ORTModelForImageClassification
+#from optimum.onnxruntime import ORTModelForImageClassification
 from transformers import AutoModelForImageClassification, SegformerForSemanticSegmentation, AutoImageProcessor, \
     AutoFeatureExtractor
-from sentence_transformers import SentenceTransformer
+#from sentence_transformers import SentenceTransformer
 from huggingface_hub import from_pretrained_keras
+
+from quantized_classes import INCModelForImageClassification
 
 N_CATEGORIES = 6
 # The dictionary has categories as keys and the list of tasks associated with them as values.
@@ -110,7 +112,7 @@ def get_model_from_task(task, model_location):
     model = None
     match task:
         case "image-classification":
-            model = ORTModelForImageClassification.from_pretrained(model_location, export=True)
+            model = AutoModelForImageClassification.from_pretrained(model_location)
         case "image-segmentation":
             model = SegformerForSemanticSegmentation.from_pretrained(model_location)
 
@@ -121,14 +123,14 @@ def get_quantized_model_from_task(task, model_location):
     model = None
     match task:
         case "image-classification":
-            model = ORTModelForImageClassification.from_pretrained(model_location, file_name="model_quantized.onnx")
+            model = INCModelForImageClassification.from_pretrained(model_location)
         case "image-segmentation":
             model = SegformerForSemanticSegmentation.from_pretrained(model_location)
 
     return model
 
 
-def get_ORT_model_from_library(library, task, model_path, quantized= False):
+def get_model_from_library(library, task, model_path, quantized= False):
     model = None
     # Switch to retrieve the model class from the different kinds of libraries
     match library:
@@ -138,7 +140,8 @@ def get_ORT_model_from_library(library, task, model_path, quantized= False):
             else:
                 model = get_model_from_task(task, model_path)
         case "sentence-similarity":
-            model = SentenceTransformer(model_path)
+            # model = SentenceTransformer(model_path)
+            pass
         case "keras":
             model = from_pretrained_keras(model_path)
         case _:
@@ -148,7 +151,7 @@ def get_ORT_model_from_library(library, task, model_path, quantized= False):
 
 def get_quantized_model_path(category, model_name):
     # The quantized model is located in the directory like: ./category/model_name_formatted/config
-    return os.path.join(os.getcwd(), category, format_name(model_name), "config")
+    return os.path.join(os.getcwd(), category, format_name(model_name), "DUMP_config")
 
 
 def get_processor_from_category(category, model_name):

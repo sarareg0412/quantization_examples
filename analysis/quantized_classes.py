@@ -1,4 +1,4 @@
-from optimum.intel import INCModel
+from optimum.intel.neural_compressor.quantization import INCModel
 from transformers import (
     AutoModelForImageClassification,
     AutoModelForSemanticSegmentation

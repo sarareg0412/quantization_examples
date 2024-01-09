@@ -1,5 +1,6 @@
 
 import evaluate
+from transformers.pipelines.pt_utils import KeyDataset
 from utils import *
 from transformers import pipeline
 from datasets import load_dataset
@@ -15,19 +16,22 @@ def run_comparison(model_data):
     processor = get_extractor_from_category(model_data["category"], model_data["model_name"])
     # No need to retrieve the non quantized model as we only need its name to retrieve it from the hub
     # Retrieve quantized model by its configuration.
-    nq_model = get_ORT_model_from_library(model_data["library"], model_data["task"], model_data["model_name"])
-    q_model = get_ORT_model_from_library(model_data["library"], model_data["task"],
-                                         get_quantized_model_path(model_data["category"], model_data["model_name"]),
-                                         quantized=True)
-    # Setup non quantized and quantized model pipeline for inferencecd
+    nq_model = get_model_from_library(model_data["library"], model_data["task"], model_data["model_name"])
+    q_model = get_model_from_library(model_data["library"], model_data["task"],
+                                     get_quantized_model_path(model_data["category"], model_data["model_name"]),
+                                     #quantized=True
+                                     )
+    # Setup non quantized and quantized model pipeline for inference
     nq_pipe = pipeline(model_data["task"], model=nq_model, image_processor=processor)
     q_pipe = pipeline(model_data["task"], model=q_model, image_processor=processor)
     # Initialize lists to store references and predictions for accuracy evaluation
-    references = []
-    nq_predictions = []
-    q_predictions = []
+    references = data["labels"]
 
     print(f"Evaluating Data for model {model_data['model_name']}")
+    nq_predictions = nq_pipe(KeyDataset(data, "image"))
+    q_predictions = q_pipe(KeyDataset(data, "image"))
+    """
+
     # Iterate through the test split
     for i,example in contrib.tenumerate(data):
         # Load object and label truth label from the dataset
@@ -47,6 +51,7 @@ def run_comparison(model_data):
         references.append(label)
         nq_predictions.append(q_model.config.label2id[nq_label])  # Map the NQ predicted label using the q model's label2id attribute
         q_predictions.append(q_model.config.label2id[q_label])    # Map the Q predicted label using the q model's label2id attribute
+    """
 
     # Calculate accuracy using the loaded accuracy metric
     exact_match_score = exact_match.compute(predictions1=nq_predictions, predictions2=q_predictions, references=references)

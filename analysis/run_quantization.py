@@ -1,9 +1,9 @@
 from evaluate import load, evaluator
 from neural_compressor.config import AccuracyCriterion, PostTrainingQuantConfig, TuningCriterion
-from optimum.intel.neural_compressor import INCQuantizer
+from optimum.intel.neural_compressor import INCQuantizer, INCModelForQuestionAnswering
 from transformers import AutoModelForImageClassification, pipeline
 from utils import *
-from optimum.onnxruntime import ORTQuantizer
+from optimum.onnxruntime import ORTQuantizer, ORTModel
 from optimum.onnxruntime.configuration import AutoQuantizationConfig
 import sys
 
@@ -70,9 +70,19 @@ def eval_func2(model):
     return results["accuracy"]
 
 
+def run_INC_quantization(save_dir):
+    model = get_model_from_library(model_data["library"], model_data["task"], model_data["model_name"])
+    quantizer = INCQuantizer.from_pretrained(model=model,
+                                             eval_fn=eval_func
+                                             )
+    # The directory where the quantized model will be saved
+    # Quantize and save the model
+    quantizer.quantize(quantization_config=quantization_config, save_directory=save_dir)
+
+
 def run_quantization(save_dir):
     # Switch for the different kinds of libraries, only transformers is supported for now
-    model = get_ORT_model_from_library(model_data["library"], model_data["task"], model_data["model_name"])
+    model = get_model_from_library(model_data["library"], model_data["task"], model_data["model_name"])
     processor = get_extractor_from_category(model_data["category"], model_data["model_name"])
     quantizer = ORTQuantizer.from_pretrained(model)
     # skipping saving the onnx checkpoint and tokenizer
@@ -86,4 +96,4 @@ def run_quantization(save_dir):
 if __name__ == "__main__":
     model_data = get_model_data_from_line(sys.argv[2])
     dataset = get_dataset_from_name(model_data["dataset"], model_data["dataset_config_name"], QUANT_SPLIT_PERCENT)
-    run_quantization(sys.argv[1])
+    run_INC_quantization(sys.argv[1])
