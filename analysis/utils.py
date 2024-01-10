@@ -41,9 +41,18 @@ category_dict = {"multi-modal": ["feature-extraction", "text-to-image", "image-t
                  }
 categories = ["multi-modal", "computer-vision", "natural-language-processing", "audio", "tabular",
               "reinforcement-learning"]
+INC_tasks = ["INCModelForSequenceClassification", "INCModelForQuestionAnswering","INCModelForTokenClassification",
+             "INCModelForMultipleChoice", "INCModelForMaskedLM", "INCModelForCausalLM", "INCModelForSeq2SeqLM"]
+INC_dict = {"INCModelForSequenceClassification":["text-classification"],
+             "INCModelForQuestionAnswering": ["question-answering"],
+             "INCModelForTokenClassification":["token-classification"],
+             "INCModelForMultipleChoice":["multiple-choice"],
+             "INCModelForMaskedLM":["fill-mask"],
+             "INCModelForCausalLM":["text-generation"],
+             "INCModelForSeq2SeqLM":["translation", "conversational", "image-to-text", "summarization"]}
 csv_name = "model_data.csv"
 csv_header = ['model_name', 'likes', 'downloads', 'category', 'task', 'library', 'dataset', 'dataset_config_name']
-N_MODELS = 5
+N_MODELS = 50
 SIMPLE_FILTER = False
 N_EXPERIMENTS = 5
 SEED = 42

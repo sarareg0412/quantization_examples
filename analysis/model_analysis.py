@@ -30,51 +30,52 @@ def get_models_of_task(task):
 
 
 def model_has_test_datasets(model):
-    # For all datasets used to train the model we retrieve its info.
-    for dataset in model.cardData["datasets"]:
-        ds = list(hf_api.list_datasets(
-            filter=DatasetFilter(
-                dataset_name=dataset
-            ),
-            limit=1,
-            full=True
-        ))
+    if(model.cardData["datasets"] is not None):
+        # For all datasets used to train the model we retrieve its info.
+        for dataset in model.cardData["datasets"]:
+            ds = list(hf_api.list_datasets(
+                filter=DatasetFilter(
+                    dataset_name=dataset
+                ),
+                limit=1,
+                full=True
+            ))
 
-        if SIMPLE_FILTER:
-            # We return the first dataset that matches the given name without further investigations on it
-            if len(ds) == 1 and ds[0].id == dataset:
-                model.dataset = dataset
-                return True
-        else:
-            # If we retrieved one dataset and its name matches the one on the model's metadata that means we found
-            # the exact dataset used to train the model
-            if len(ds) == 1 and ds[0].id == dataset:
-                datasetInfo = ds[0]
-                # Check whether the "cardData", 'dataset_info' attributes of the dataset exist
-                if (getattr(datasetInfo, "cardData", None) is not None) and ('dataset_info' in datasetInfo.cardData):
-                    # We check whether the dataset has multiple configurations. If so, we have to loop through them
-                    if isinstance(datasetInfo.cardData['dataset_info'], list):
-                        for config in datasetInfo.cardData['dataset_info']:
-                            # We look for the "test" split of the dataset configuration and if there is one we return
-                            # True because we only need one dataset with the test split.
+            if SIMPLE_FILTER:
+                # We return the first dataset that matches the given name without further investigations on it
+                if len(ds) == 1 and ds[0].id == dataset:
+                    model.dataset = dataset
+                    return True
+            else:
+                # If we retrieved one dataset and its name matches the one on the model's metadata that means we found
+                # the exact dataset used to train the model
+                if len(ds) == 1 and ds[0].id == dataset:
+                    datasetInfo = ds[0]
+                    # Check whether the "cardData", 'dataset_info' attributes of the dataset exist
+                    if (getattr(datasetInfo, "cardData", None) is not None) and ('dataset_info' in datasetInfo.cardData):
+                        # We check whether the dataset has multiple configurations. If so, we have to loop through them
+                        if isinstance(datasetInfo.cardData['dataset_info'], list):
+                            for config in datasetInfo.cardData['dataset_info']:
+                                # We look for the "test" split of the dataset configuration and if there is one we return
+                                # True because we only need one dataset with the test split.
+                                try:
+                                    for split in config['splits']:
+                                        if split['name'] == 'test':
+                                            model.dataset = dataset
+                                            model.ds_config_name = config['config_name']
+                                            return True
+                                except Exception as e:
+                                    print(e)
+
+                        else:
                             try:
-                                for split in config['splits']:
+                                # The dataset doesn't have multiple configurations, we look for the "test" split.
+                                for split in datasetInfo.cardData['dataset_info']['splits']:
                                     if split['name'] == 'test':
                                         model.dataset = dataset
-                                        model.ds_config_name = config['config_name']
                                         return True
                             except Exception as e:
                                 print(e)
-
-                    else:
-                        try:
-                            # The dataset doesn't have multiple configurations, we look for the "test" split.
-                            for split in datasetInfo.cardData['dataset_info']['splits']:
-                                if split['name'] == 'test':
-                                    model.dataset = dataset
-                                    return True
-                        except Exception as e:
-                            print(e)
 
     return False
 
@@ -92,9 +93,9 @@ def check_existing_dataset(models):
     return best_models
 
 
-def get_top_models_of_category(category, n):
+def get_top_models_of_category(dict, category, n):
     # Retrieving the list of models for all tasks in the category
-    models = [get_models_of_task(task) for task in category_dict[category]]
+    models = [get_models_of_task(task) for task in dict[category]]
     # We reduce the list of models of different tasks per category, in a single 1D list
     models = reduce_to_1D_list(models)
     # Take out duplicate models since the same model could belong to different tasks of the same category
@@ -134,7 +135,7 @@ def create_categories_csv():
         # We get the list of top models for a list of tasks of the same category.
         category = categories[i]
         print("Get top {} models of category {}".format(N_MODELS, category))
-        cat_models = get_top_models_of_category(category=category, n=N_MODELS)
+        cat_models = get_top_models_of_category(dict=category_dict,category=category, n=N_MODELS)
         print("Start CSV creation for category {}".format(category))
         create_csv(cat_models, category)
         print("Done.")
@@ -146,11 +147,22 @@ def create_full_csv():
         # We get the list of top models for a list of tasks of the same category.
         category = categories[i]
         print("Get top {} models of category {}".format(N_MODELS, category))
-        models.extend(get_top_models_of_category(category=category, n=N_MODELS))
+        models.extend(get_top_models_of_category(dict=category_dict,category=category, n=N_MODELS))
 
     print("Start CSV creation")
     create_csv(models, None)
     print("Done.")
 
 
-create_categories_csv()
+def create_INC_csv():
+    for i in range(0,len(INC_tasks)):
+        category = INC_tasks[i]
+        print("Get top {} models of category {}".format(N_MODELS, category))
+        cat_models = get_top_models_of_category(dict=INC_dict,category=category, n=N_MODELS)
+        print("Start CSV creation")
+        create_csv(cat_models, category)
+        print("Done.")
+
+
+#create_categories_csv()
+create_INC_csv()
