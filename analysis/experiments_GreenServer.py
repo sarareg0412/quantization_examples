@@ -8,9 +8,9 @@ from run_quantization import run_quantization
 DEBUG = False
 
 def get_models_line_from_csv(category):
-    filename = "../models_csv/{}".format(csv_name)
-    if category is not None:
-        filename = "../models_csv/{}_{}".format(category, csv_name)
+    filename = "./INC_models/INCModelFor{}_{}".format(category, csv_name)
+    #if category is not None:
+    #    filename = "../models_csv/{}_{}".format(category, csv_name)
     with open(filename) as file:
         csvReader = csv.reader(file)
         # ['model_name', 'likes', 'downloads', 'category', 'task', 'library', 'dataset', 'dataset_config_name']
@@ -84,8 +84,8 @@ def infer_and_measure_consumption(quantized):
 
 def compare_models():
     # Load models from csv file
-    top_N_models = get_models_line_from_csv("computer-vision")
-    line = top_N_models[3]  # beans model
+    top_N_models = get_models_line_from_csv("SequenceClassification")
+    line = top_N_models[0]  # cardiffNLP
     model_data = get_model_data_from_line(line)
     #for n_experiment in range(0, N_EXPERIMENTS + 1):
     run_comparison(model_data)

@@ -5,13 +5,22 @@ from utils import *
 from transformers import pipeline
 from datasets import load_dataset
 from tqdm import contrib
-from evaluate import evaluator
+from evaluate import evaluator, load
+
+accuracy = load("accuracy")
+
+
+def compute_metrics(eval_pred):
+    predictions, labels = eval_pred
+    predictions = np.argmax(predictions, axis=1)
+    return accuracy.compute(predictions=predictions, references=labels)
 
 
 def run_evaluation_from_line(quantized, line):
     model_data = get_model_data_from_line(line)
     data = (load_dataset(model_data["dataset"], model_data["dataset_config_name"], split="test"))
-    data = data.train_test_split(train_size=0.5, seed=SEED)["train"]  # Use 50% of test dataset to make inference
+    data = data.train_test_split(train_size=0.05, seed=SEED)["train"].select(
+        range(500))  # Use 50% of test dataset to make inference
 
     quantized = True if (quantized == "True") else False
     model_path = get_quantized_model_path(model_data["category"], model_data["model_name"])
@@ -20,10 +29,15 @@ def run_evaluation_from_line(quantized, line):
     if not quantized:
         model_path = model_data["model_name"]
 
-    model = get_model_from_library(model_data["library"], model_data["task"], model_path)
+    model = get_model_from_library(model_data["library"], model_data["category"], model_path, quantized=quantized)
     processor = get_processor_from_category(model_data["category"], model_data["model_name"])
 
+    #match model_data["category"]:
+    #    case "INCModelForSequenceClassification":
+    #        data = list(map(lambda x: preprocess_function(tokenizer=processor, examples=x), data))
+
     compute_accuracy = False
+
     if compute_accuracy:
         task_evaluator = evaluator(model_data["task"])
         # Evaluate the model's accuracy if it's  (performs inference too)
@@ -31,20 +45,22 @@ def run_evaluation_from_line(quantized, line):
             model_or_pipeline=model,
             data=data,
             label_column=data.column_names[-1],  # We assume the last column is the labels one
-            label_mapping=model.config.label2id,    # Extremely important
-            feature_extractor=processor,
+            label_mapping=model.config.label2id,  # Extremely important
             tokenizer=processor
         )
         print(eval_results)
     else:
-        pipe = pipeline(model_data["task"], model=model, image_processor=processor)
+        pipe = pipeline(model_data["task"], model=model, tokenizer=processor)
 
         print("PERFORMING INFERENCE")
 
         # map the dataset to a list of PIL.Image for input to the pipeline
         # pipe(inputs) should return a list of scores + labels
+        match model_data["category"]:
+            case "INCModelForSequenceClassification":
+                data = KeyDataset(data, "text")
 
-        for out in tqdm(pipe(KeyDataset(data, "image"))):
+        for out in tqdm(pipe(data)):
             print(out)
         """
         # Iterate through the validation set or any other split
@@ -70,6 +86,12 @@ def run_evaluation_from_line(quantized, line):
             predictions.append(model.config.label2id[predicted_label])  # Map the predicted label using the model's label2id attribute
         """
 
+
+def preprocess_function(tokenizer, examples):
+    return tokenizer(examples["text"], truncation=True)
+
+
 if __name__ == "__main__":
-    #run_evaluation_from_line(sys.argv[1], sys.argv[2])
-    run_evaluation_from_line("False","nateraw/vit-base-beans,10,2023,computer-vision,image-classification,transformers,beans,")
+    # run_evaluation_from_line(sys.argv[1], sys.argv[2])
+    run_evaluation_from_line("True",
+                             "cardiffnlp/twitter-roberta-base-sentiment-latest,277,22948384,INCModelForSequenceClassification,text-classification,transformers,tweet_eval,emoji")

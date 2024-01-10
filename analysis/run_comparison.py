@@ -8,34 +8,34 @@ from tqdm import contrib
 
 exact_match = evaluate.load("exact_match", module_type="comparison")
 
+
 def run_comparison(model_data):
     data = (load_dataset(model_data["dataset"], model_data["dataset_config_name"], split="test"))
-    data = data.train_test_split(train_size=0.5, seed=SEED)["test"]  # Use 50% of test dataset to run comparison
+    data = data.train_test_split(train_size=0.05, seed=SEED)["train"]  # Use 50% of test dataset to run comparison
 
     # Get processor (image processor, tokenizer etc.)
-    processor = get_extractor_from_category(model_data["category"], model_data["model_name"])
+    processor = get_processor_from_category(model_data["category"], model_data["model_name"])
     # No need to retrieve the non quantized model as we only need its name to retrieve it from the hub
     # Retrieve quantized model by its configuration.
-    nq_model = get_model_from_library(model_data["library"], model_data["task"], model_data["model_name"])
-    q_model = get_model_from_library(model_data["library"], model_data["task"],
+    nq_model = get_model_from_library(model_data["library"], model_data["category"], model_data["model_name"])
+    q_model = get_model_from_library(model_data["library"], model_data["category"],
                                      get_quantized_model_path(model_data["category"], model_data["model_name"]),
-                                     #quantized=True
+                                     quantized=True
                                      )
     # Setup non quantized and quantized model pipeline for inference
-    nq_pipe = pipeline(model_data["task"], model=nq_model, image_processor=processor)
-    q_pipe = pipeline(model_data["task"], model=q_model, image_processor=processor)
+    nq_pipe = pipeline(model_data["task"], model=nq_model, tokenizer=processor)
+    q_pipe = pipeline(model_data["task"], model=q_model, tokenizer=processor)
     # Initialize lists to store references and predictions for accuracy evaluation
-    references = data["labels"]
+    references = data["label"]
 
     print(f"Evaluating Data for model {model_data['model_name']}")
-    nq_predictions = nq_pipe(KeyDataset(data, "image"))
-    q_predictions = q_pipe(KeyDataset(data, "image"))
-    """
+    nq_predictions = [] # nq_pipe(data)
+    q_predictions = [] # q_pipe(data)
 
     # Iterate through the test split
     for i,example in contrib.tenumerate(data):
         # Load object and label truth label from the dataset
-        object = example[data.column_names[1]]  # Assume the object column name is the first one
+        object = example[data.column_names[0]]  # Assume the object column name is the first one
         label = example[data.column_names[-1]]  # Assume the label column name is the last one
 
         # Infer the object label using the model
@@ -51,7 +51,6 @@ def run_comparison(model_data):
         references.append(label)
         nq_predictions.append(q_model.config.label2id[nq_label])  # Map the NQ predicted label using the q model's label2id attribute
         q_predictions.append(q_model.config.label2id[q_label])    # Map the Q predicted label using the q model's label2id attribute
-    """
 
     # Calculate accuracy using the loaded accuracy metric
     exact_match_score = exact_match.compute(predictions1=nq_predictions, predictions2=q_predictions, references=references)

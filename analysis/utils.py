@@ -4,19 +4,31 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import os
 import seaborn as sns;
+from optimum.intel import (
+    INCModelForSequenceClassification, 
+    INCModelForQuestionAnswering, 
+    INCModelForTokenClassification, 
+    INCModelForMultipleChoice,
+    INCModelForMaskedLM,
+    INCModelForCausalLM,
+    INCModelForSeq2SeqLM
+    )
+from transformers import (
+    AutoModelForSequenceClassification,
+    AutoModelForQuestionAnswering,
+    AutoModelForTokenClassification,
+    AutoModelForMultipleChoice,
+    AutoModelForMaskedLM,
+    AutoModelForCausalLM,
+    AutoModelForSeq2SeqLM
+)
 
 sns.set()
 import numpy as np
 import torch
 
 from datasets import load_dataset
-#from optimum.onnxruntime import ORTModelForImageClassification
-from transformers import AutoModelForImageClassification, SegformerForSemanticSegmentation, AutoImageProcessor, \
-    AutoFeatureExtractor
-#from sentence_transformers import SentenceTransformer
-from huggingface_hub import from_pretrained_keras
-
-from quantized_classes import INCModelForImageClassification
+from transformers import AutoTokenizer
 
 N_CATEGORIES = 6
 # The dictionary has categories as keys and the list of tasks associated with them as values.
@@ -117,70 +129,71 @@ def generate_metric_charts(path: str, model_name, workloads: [str]):
     # plt.show()
 
 
-def get_model_from_task(task, model_location):
+def get_model_from_category(task, model_location):
     model = None
     match task:
-        case "image-classification":
-            model = AutoModelForImageClassification.from_pretrained(model_location)
-        case "image-segmentation":
-            model = SegformerForSemanticSegmentation.from_pretrained(model_location)
+        case "INCModelForSequenceClassification":
+            model = AutoModelForSequenceClassification.from_pretrained(model_location)
+        case "INCModelForQuestionAnswering":
+            model = AutoModelForQuestionAnswering.from_pretrained(model_location)
+        case "INCModelForTokenClassification":
+            model = AutoModelForTokenClassification.from_pretrained(model_location)
+        case "INCModelForMultipleChoice":
+            model = AutoModelForMultipleChoice.from_pretrained(model_location)
+        case "INCModelForMaskedLM":
+            model = AutoModelForMaskedLM.from_pretrained(model_location)
+        case "INCModelForCausalLM":
+            model = AutoModelForCausalLM.from_pretrained(model_location)
+        case "INCModelForSeq2SeqLM":
+            model = AutoModelForSeq2SeqLM.from_pretrained(model_location)
 
     return model
 
 
-def get_quantized_model_from_task(task, model_location):
+def get_quantized_model_from_category(task, model_location):
     model = None
     match task:
-        case "image-classification":
-            model = INCModelForImageClassification.from_pretrained(model_location)
-        case "image-segmentation":
-            model = SegformerForSemanticSegmentation.from_pretrained(model_location)
+        case "INCModelForSequenceClassification":
+            model = INCModelForSequenceClassification.from_pretrained(model_location)
+        case "INCModelForQuestionAnswering":
+            model = INCModelForQuestionAnswering.from_pretrained(model_location)
+        case "INCModelForTokenClassification":
+            model = INCModelForTokenClassification.from_pretrained(model_location)
+        case "INCModelForMultipleChoice":
+            model = INCModelForMultipleChoice.from_pretrained(model_location)
+        case "INCModelForMaskedLM":
+            model = INCModelForMaskedLM.from_pretrained(model_location)
+        case "INCModelForCausalLM":
+            model = INCModelForCausalLM.from_pretrained(model_location)
+        case "INCModelForSeq2SeqLM":
+            model = INCModelForSeq2SeqLM.from_pretrained(model_location)
 
     return model
 
 
-def get_model_from_library(library, task, model_path, quantized= False):
+def get_model_from_library(library, category, model_path, quantized= False):
     model = None
     # Switch to retrieve the model class from the different kinds of libraries
     match library:
         case "transformers":
             if quantized:
-                model = get_quantized_model_from_task(task, model_path)
+                model = get_quantized_model_from_category(category, model_path)
             else:
-                model = get_model_from_task(task, model_path)
-        case "sentence-similarity":
-            # model = SentenceTransformer(model_path)
-            pass
-        case "keras":
-            model = from_pretrained_keras(model_path)
-        case _:
-            model = None
+                model = get_model_from_category(category, model_path)
     return model
 
 
 def get_quantized_model_path(category, model_name):
     # The quantized model is located in the directory like: ./category/model_name_formatted/config
-    return os.path.join(os.getcwd(), category, format_name(model_name), "DUMP_config")
+    return os.path.join(os.getcwd(), category, format_name(model_name), "config")
 
 
 def get_processor_from_category(category, model_name):
     processor = None
     match category:
-        case "computer-vision":
-            processor = AutoImageProcessor.from_pretrained(model_name)
-        case _:
-            processor = None
-
-    return processor
-
-def get_extractor_from_category(category, model_name):
-    processor = None
-    match category:
-        case "computer-vision":
-            processor = AutoFeatureExtractor.from_pretrained(model_name)
-
-        case _:
-            processor = None
+        case ("INCModelForSequenceClassification"| "INCModelForQuestionAnswering"| "INCModelForTokenClassification"|
+              "INCModelForMultipleChoice"| "INCModelForMaskedLM"| "INCModelForCausalLM"| "INCModelForSeq2SeqLM"):
+            processor = AutoTokenizer.from_pretrained(model_name)
 
     return processor
 
