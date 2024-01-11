@@ -45,7 +45,7 @@ def quantize_and_measure_consumption():
             run_quantization(energy_output_file)
         else:
             subprocess.run([
-                            #"../energibridge", "-o", "{}".format(energy_output_file),
+                            "../energibridge", "-o", "{}".format(energy_output_file),
                             "optimum-cli", "inc", "quantize", "--model","{}".format(model_data["model_name"]),
                             "--output", "{}".format(save_model_dir)
                             #"python", "run_quantization.py", "{}".format(save_model_dir),
@@ -69,7 +69,7 @@ def infer_and_measure_consumption(quantized):
     # Preliminary creation of the needed directory to save the output file, or the energibridge command won't work
     os.makedirs(save_energy_file_dir, exist_ok=True)
 
-    for n_experiment in range(0, 1):
+    for n_experiment in range(0, N_EXPERIMENTS + 1):
         # The output file will be named model-name-formatted_Q_inf_exp0.csv
         energy_output_file = "{}/{}_{}inf_exp{}.csv".format(save_energy_file_dir,
                                                             model_name_formatted,
@@ -78,7 +78,7 @@ def infer_and_measure_consumption(quantized):
         print("START INFERENCE FOR {}MODEL {} - EXP {}".format("QUANTIZED " if quantized else "",
                                                                 model_data["model_name"], n_experiment))
         subprocess.run([
-                        #"../energibridge", "-o", "{}".format(energy_output_file),
+                        "../energibridge", "-o", "{}".format(energy_output_file),
                         "python", "run_inference.py", "{}".format(str(quantized)),
                         "{}".format(line)])
         print("END INFERENCE FOR {}MODEL {} - EXP {}".format("QUANTIZED " if quantized else "",
