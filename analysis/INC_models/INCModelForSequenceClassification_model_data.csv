@@ -1,6 +1,6 @@
 model_name,likes,downloads,category,task,library,dataset,dataset_config_name
-cardiffnlp/twitter-roberta-base-sentiment-latest,277,22948384,INCModelForSequenceClassification,text-classification,transformers,tweet_eval,emoji
-cardiffnlp/twitter-roberta-base-sentiment,228,1451306,INCModelForSequenceClassification,text-classification,transformers,tweet_eval,emoji
+cardiffnlp/twitter-roberta-base-sentiment-latest,277,22948384,INCModelForSequenceClassification,text-classification,transformers,tweet_eval,sentiment
+cardiffnlp/twitter-roberta-base-sentiment,228,1451306,INCModelForSequenceClassification,text-classification,transformers,tweet_eval,sentiment
 SamLowe/roberta-base-go_emotions,220,6742813,INCModelForSequenceClassification,text-classification,transformers,go_emotions,simplified
 vectara/hallucination_evaluation_model,107,11166,INCModelForSequenceClassification,text-classification,transformers,snli,
 arpanghoshal/EmoRoBERTa,82,8820,INCModelForSequenceClassification,text-classification,transformers,go_emotions,simplified

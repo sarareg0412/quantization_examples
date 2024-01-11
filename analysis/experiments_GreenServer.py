@@ -7,6 +7,7 @@ from run_quantization import run_quantization
 
 DEBUG = False
 
+
 def get_models_line_from_csv(category):
     filename = "./INC_models/INCModelFor{}_{}".format(category, csv_name)
     #if category is not None:
@@ -22,16 +23,14 @@ def get_models_line_from_csv(category):
 
 
 def quantize_and_measure_consumption():
-    # Load models from csv file
-    top_N_models = get_models_line_from_csv("computer-vision")
-
-    line = top_N_models[3]    # beans model
+    top_N_models = get_models_line_from_csv("SequenceClassification")
+    line = top_N_models[2]  # cardiffNLP
     model_data = get_model_data_from_line(line)
 
     model_name_formatted = format_name(model_data["model_name"])
 
     # The saving directory of the model weights will follow the naming convention like
-    # ./computer-vision/model_name_formatted/config
+    # ./INCModelFor.../model_name_formatted/config
     save_model_dir = "{}/{}/config".format(model_data["category"], model_name_formatted)
     # The model's energy data files will be csv and in the directory following the naming convention like
     # ./computer-vision/model_name_formatted/quant_energy_data
@@ -45,17 +44,20 @@ def quantize_and_measure_consumption():
         if DEBUG:
             run_quantization(energy_output_file)
         else:
-            subprocess.run(["../energibridge", "-o", "{}".format(energy_output_file),
-                            "python", "run_quantization.py", "{}".format(save_model_dir),
-                                                             "{}".format(line)
+            subprocess.run([
+                            #"../energibridge", "-o", "{}".format(energy_output_file),
+                            "optimum-cli", "inc", "quantize", "--model","{}".format(model_data["model_name"]),
+                            "--output", "{}".format(save_model_dir)
+                            #"python", "run_quantization.py", "{}".format(save_model_dir),
+                            #                                 "{}".format(line)
                             ])
         print("END QUANTIZATION FOR MODEL {} - EXP {}".format(model_data["model_name"], n_experiment))
 
 
 def infer_and_measure_consumption(quantized):
     # Load models from csv file
-    top_N_models = get_models_line_from_csv("computer-vision")
-    line = top_N_models[3]    # beans model
+    top_N_models = get_models_line_from_csv("SequenceClassification")
+    line = top_N_models[2]  # cardiffNLP
 
     model_data = get_model_data_from_line(line)
     model_name_formatted = format_name(model_data["model_name"])
@@ -67,7 +69,7 @@ def infer_and_measure_consumption(quantized):
     # Preliminary creation of the needed directory to save the output file, or the energibridge command won't work
     os.makedirs(save_energy_file_dir, exist_ok=True)
 
-    for n_experiment in range(0, N_EXPERIMENTS + 1):
+    for n_experiment in range(0, 1):
         # The output file will be named model-name-formatted_Q_inf_exp0.csv
         energy_output_file = "{}/{}_{}inf_exp{}.csv".format(save_energy_file_dir,
                                                             model_name_formatted,
@@ -75,7 +77,8 @@ def infer_and_measure_consumption(quantized):
                                                             n_experiment)
         print("START INFERENCE FOR {}MODEL {} - EXP {}".format("QUANTIZED " if quantized else "",
                                                                 model_data["model_name"], n_experiment))
-        subprocess.run(["../energibridge", "-o", "{}".format(energy_output_file),
+        subprocess.run([
+                        #"../energibridge", "-o", "{}".format(energy_output_file),
                         "python", "run_inference.py", "{}".format(str(quantized)),
                         "{}".format(line)])
         print("END INFERENCE FOR {}MODEL {} - EXP {}".format("QUANTIZED " if quantized else "",
@@ -85,7 +88,7 @@ def infer_and_measure_consumption(quantized):
 def compare_models():
     # Load models from csv file
     top_N_models = get_models_line_from_csv("SequenceClassification")
-    line = top_N_models[0]  # cardiffNLP
+    line = top_N_models[2]  # cardiffNLP
     model_data = get_model_data_from_line(line)
     #for n_experiment in range(0, N_EXPERIMENTS + 1):
     run_comparison(model_data)
@@ -94,4 +97,5 @@ def compare_models():
 
 #quantize_and_measure_consumption()
 #infer_and_measure_consumption(True)
+#infer_and_measure_consumption(False)
 compare_models()

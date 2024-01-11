@@ -1,58 +1,56 @@
+import csv
 
 import evaluate
-from transformers.pipelines.pt_utils import KeyDataset
 from utils import *
-from transformers import pipeline
-from datasets import load_dataset
-from tqdm import contrib
 
-exact_match = evaluate.load("exact_match", module_type="comparison")
-
+exact_match_references = evaluate.load("exact_match", module_type="comparison")
+exact_match = evaluate.load("exact_match")
+accuracy = evaluate.load("accuracy")
 
 def run_comparison(model_data):
     data = (load_dataset(model_data["dataset"], model_data["dataset_config_name"], split="test"))
-    data = data.train_test_split(train_size=0.05, seed=SEED)["train"]  # Use 50% of test dataset to run comparison
-
+    data = (data.train_test_split(train_size=0.05, seed=SEED)["train"])
+            #.select(range(500))) # Use 50% of test dataset to run comparison
     # Get processor (image processor, tokenizer etc.)
-    processor = get_processor_from_category(model_data["category"], model_data["model_name"])
+    #processor = get_processor_from_category(model_data["category"], model_data["model_name"])
     # No need to retrieve the non quantized model as we only need its name to retrieve it from the hub
     # Retrieve quantized model by its configuration.
-    nq_model = get_model_from_library(model_data["library"], model_data["category"], model_data["model_name"])
-    q_model = get_model_from_library(model_data["library"], model_data["category"],
-                                     get_quantized_model_path(model_data["category"], model_data["model_name"]),
-                                     quantized=True
-                                     )
+    #nq_model = get_model_from_library(model_data["library"], model_data["category"], model_data["model_name"])
+    #q_model = get_model_from_library(model_data["library"], model_data["category"],
+    #                                 get_quantized_model_path(model_data["category"], model_data["model_name"]),
+    #                                 quantized=True
+    #                                 )
     # Setup non quantized and quantized model pipeline for inference
-    nq_pipe = pipeline(model_data["task"], model=nq_model, tokenizer=processor)
-    q_pipe = pipeline(model_data["task"], model=q_model, tokenizer=processor)
+    #nq_pipe = pipeline(model_data["task"], model=nq_model, tokenizer=processor)
+    #q_pipe = pipeline(model_data["task"], model=q_model, tokenizer=processor)
     # Initialize lists to store references and predictions for accuracy evaluation
-    references = data["label"]
+    label_column = "label" if "label" in data.column_names else "labels"
+    references = data[label_column]
 
-    print(f"Evaluating Data for model {model_data['model_name']}")
-    nq_predictions = [] # nq_pipe(data)
-    q_predictions = [] # q_pipe(data)
+    print(f"Evaluating Data for model {model_data['model_name']} and "
+          f"Dataset {model_data['dataset']}/{model_data['dataset_config_name']}")
+    NQ_output = (f"{model_data['category']}/{format_name(model_data['model_name'])}/NQ_output.csv")
+    Q_output = (f"{model_data['category']}/{format_name(model_data['model_name'])}/Q_output.csv")
 
-    # Iterate through the test split
-    for i,example in contrib.tenumerate(data):
-        # Load object and label truth label from the dataset
-        object = example[data.column_names[0]]  # Assume the object column name is the first one
-        label = example[data.column_names[-1]]  # Assume the label column name is the last one
-
-        # Infer the object label using the model
-        nq_prediction = nq_pipe(object)
-        q_prediction = q_pipe(object)
-        # Since there might be multiple labels with multiple scores associated, we get the first one.
-        nq_label = nq_prediction[0]['label'] if isinstance(nq_prediction, list) \
-            else nq_prediction['label']
-        q_label = q_prediction[0]['label'] if isinstance(q_prediction, list) \
-            else q_prediction['label']
-
-        # Append ground truth label and predicted label for accuracy evaluation
-        references.append(label)
-        nq_predictions.append(q_model.config.label2id[nq_label])  # Map the NQ predicted label using the q model's label2id attribute
-        q_predictions.append(q_model.config.label2id[q_label])    # Map the Q predicted label using the q model's label2id attribute
+    # Open the CSV file and skip the header row
+    with open(NQ_output, 'r') as file:
+        csv_reader = csv.reader(file)
+        # Skip the header row
+        next(csv_reader)
+        # Read the remaining rows into a list
+        nq_predictions = reduce_to_1D_list(list(csv_reader))
+    with open(Q_output, 'r') as file:
+        csv_reader = csv.reader(file)
+        # Skip the header row
+        next(csv_reader)
+        # Read the remaining rows into a list
+        q_predictions = reduce_to_1D_list(list(csv_reader))
 
     # Calculate accuracy using the loaded accuracy metric
-    exact_match_score = exact_match.compute(predictions1=nq_predictions, predictions2=q_predictions, references=references)
+    exact_match_score = exact_match.compute(predictions=q_predictions, references=nq_predictions)
+    NQ_accuracy = accuracy.compute(predictions=nq_predictions, references=references)
+    Q_accuracy = accuracy.compute(predictions=q_predictions, references=references)
 
+    print(f"NQ model accuracy score is : {NQ_accuracy}")
+    print(f"Q model accuracy score is : {Q_accuracy}")
     print(f"Exact match score is : {exact_match_score}")
