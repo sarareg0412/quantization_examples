@@ -14,7 +14,7 @@ from evaluate import evaluator, load
 def run_evaluation_from_line(quantized, line):
     model_data = get_model_data_from_line(line)
     data = (load_dataset(model_data["dataset"], model_data["dataset_config_name"], split="test"))
-    data = (data.train_test_split(train_size=0.05, seed=SEED)["train"])
+    #data = (data.train_test_split(train_size=0.05, seed=SEED)["train"])
             #.select(range(500)))  # Use 50% of test dataset to make inference
 
     quantized = True if (quantized == "True") else False
