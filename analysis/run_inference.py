@@ -11,10 +11,10 @@ from tqdm import contrib
 from evaluate import evaluator, load
 
 
-def run_evaluation_from_line(quantized, line):
+def run_inference_from_line(quantized, line):
     model_data = get_model_data_from_line(line)
     data = (load_dataset(model_data["dataset"], model_data["dataset_config_name"], split="test"))
-    #data = (data.train_test_split(train_size=0.05, seed=SEED)["train"])
+    data = (data.train_test_split(train_size=0.05, seed=SEED)["train"])
             #.select(range(500)))  # Use 50% of test dataset to make inference
 
     quantized = True if (quantized == "True") else False
@@ -45,21 +45,28 @@ def run_evaluation_from_line(quantized, line):
     """
     pipe = pipeline(model_data["task"], model=model, tokenizer=processor)
 
-    print("PERFORMING INFERENCE")
+    print(f"PERFORMING INFERENCE on {'QUANTIZED ' if quantized else ' '}{model_data['model_name']} and "
+          f"{model_data['dataset']}/{model_data['dataset_config_name']}")
 
     # map the dataset to a list of PIL.Image for input to the pipeline
     # pipe(inputs) should return a list of scores + labels
     match model_data["category"]:
         case "INCModelForSequenceClassification":
-            data = KeyDataset(data, "text")
+            data = KeyDataset(data.map(), "text")
 
     with open(output_file_name, mode='w', newline='') as file:
         writer = csv.writer(file)
         # Write the header
         writer.writerow(["label"])
         for out in tqdm(pipe(data)):
-            writer.writerow(str(model.config.label2id[out["label"]]))
+            if isinstance(out['label'], list):
+                print("OK")
 
+            # Since there might be multiple labels with multiple scores associated, we get the first one.
+            predicted_label = out[0]['label'] if isinstance(out['label'], list) \
+                                                                   else out['label']
+            writer.writerow(str(model.config.label2id[predicted_label]))
+        print("Done")
         """
         # Iterate through the validation set or any other split
         for i, example in contrib.tenumerate(data):
@@ -85,6 +92,6 @@ def run_evaluation_from_line(quantized, line):
         """
 
 if __name__ == "__main__":
-    run_evaluation_from_line(sys.argv[1], sys.argv[2])
+    run_inference_from_line(sys.argv[1], sys.argv[2])
     #run_evaluation_from_line("True",
     #                         "cardiffnlp/twitter-roberta-base-sentiment-latest,277,22948384,INCModelForSequenceClassification,text-classification,transformers,tweet_eval,sentiment")

@@ -71,9 +71,9 @@ def infer_and_measure_consumption(quantized):
     # Preliminary creation of the needed directory to save the output file, or the energibridge command won't work
     os.makedirs(save_energy_file_dir, exist_ok=True)
 
-    for n_experiment in range(0, N_EXPERIMENTS + 1):
+    for n_experiment in range(0, 1):
         # add
-        time.sleep(5)   # Sleep for 5 seconds
+        #time.sleep(5)   # Sleep for 5 seconds
         # The output file will be named model-name-formatted_Q_inf_exp0.csv
         energy_output_file = "{}/{}_{}inf_exp{}.csv".format(save_energy_file_dir,
                                                             model_name_formatted,
@@ -82,7 +82,7 @@ def infer_and_measure_consumption(quantized):
         print("START INFERENCE FOR {}MODEL {} - EXP {}".format("QUANTIZED " if quantized else "",
                                                                 model_data["model_name"], n_experiment))
         subprocess.run([
-                        "../energibridge", "-o", "{}".format(energy_output_file),
+                        #"../energibridge", "-o", "{}".format(energy_output_file),
                         "python", "run_inference.py", "{}".format(str(quantized)),
                         "{}".format(line)])
         print("END INFERENCE FOR {}MODEL {} - EXP {}".format("QUANTIZED " if quantized else "",
@@ -100,6 +100,6 @@ def compare_models():
 
 
 #quantize_and_measure_consumption()
-#infer_and_measure_consumption(True)
+infer_and_measure_consumption(True)
 #infer_and_measure_consumption(False)
-compare_models()
+#compare_models()

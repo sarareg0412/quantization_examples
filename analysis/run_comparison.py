@@ -9,7 +9,7 @@ accuracy = evaluate.load("accuracy")
 
 def run_comparison(model_data):
     data = (load_dataset(model_data["dataset"], model_data["dataset_config_name"], split="test"))
-    data = (data.train_test_split(train_size=0.05, seed=SEED)["train"])
+    #data = (data.train_test_split(train_size=0.05, seed=SEED)["train"])
             #.select(range(500))) # Use 50% of test dataset to run comparison
     # Get processor (image processor, tokenizer etc.)
     #processor = get_processor_from_category(model_data["category"], model_data["model_name"])

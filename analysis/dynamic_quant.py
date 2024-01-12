@@ -1,7 +1,7 @@
 import csv
 import time
 
-from analysis.run_comparison import run_comparison
+from run_comparison import run_comparison
 from utils import *
 import subprocess
 
