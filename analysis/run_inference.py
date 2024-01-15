@@ -7,8 +7,6 @@ from transformers.pipelines.pt_utils import KeyDataset
 from utils import *
 from transformers import pipeline
 from datasets import load_dataset
-from tqdm import contrib
-from evaluate import evaluator, load
 
 
 def run_inference_from_line(quantized, line):
@@ -28,45 +26,24 @@ def run_inference_from_line(quantized, line):
     processor = get_processor_from_category(model_data["category"], model_data["model_name"])
     output_file_name = (f"{model_data['category']}/{format_name(model_data['model_name'])}/"
                         f"{'' if quantized else 'N'}Q_output.csv")
-    """
-    compute_accuracy = False
-
-    if compute_accuracy:
-        task_evaluator = evaluator(model_data["task"])
-        # Evaluate the model's accuracy if it's  (performs inference too)
-        eval_results = task_evaluator.compute(
-            model_or_pipeline=model,
-            data=data,
-            label_column=data.column_names[-1],  # We assume the last column is the labels one
-            label_mapping=model.config.label2id,  # Extremely important
-            tokenizer=processor
-        )
-        print(eval_results)
-    """
     pipe = pipeline(model_data["task"], model=model, tokenizer=processor)
 
     print(f"PERFORMING INFERENCE on {'QUANTIZED ' if quantized else ' '}{model_data['model_name']} and "
           f"{model_data['dataset']}/{model_data['dataset_config_name']}")
 
-    # map the dataset to a list of PIL.Image for input to the pipeline
-    # pipe(inputs) should return a list of scores + labels
-    match model_data["category"]:
-        case "INCModelForSequenceClassification":
-            data = KeyDataset(data.map(), "text")
+    # map the dataset based on the category
+    data = map_data(data,model_data["category"])
 
     with open(output_file_name, mode='w', newline='') as file:
         writer = csv.writer(file)
         # Write the header
         writer.writerow(["label"])
         for out in tqdm(pipe(data)):
-            if isinstance(out['label'], list):
-                print("OK")
-
             # Since there might be multiple labels with multiple scores associated, we get the first one.
-            predicted_label = out[0]['label'] if isinstance(out['label'], list) \
-                                                                   else out['label']
-            writer.writerow(str(model.config.label2id[predicted_label]))
+            prediction = get_prediction(out,model_data["category"], model.config.label2id)
+            writer.writerow(prediction)
         print("Done")
+
         """
         # Iterate through the validation set or any other split
         for i, example in contrib.tenumerate(data):
@@ -90,6 +67,26 @@ def run_inference_from_line(quantized, line):
             references.append(label)
             predictions.append(model.config.label2id[predicted_label])  # Map the predicted label using the model's label2id attribute
         """
+
+def map_data(data, category):
+    match category:
+        case "INCModelForSequenceClassification":
+            data = KeyDataset(data, "text")
+        case "INCModelForQuestionAnswering":
+            data = create_squad_examples(data)
+
+    return data
+
+
+def get_prediction(out, category, convert_fn):
+    match category:
+        case "INCModelForSequenceClassification":
+            out = out[0]['label'] if isinstance(out['label'], list) else out['label']
+            out = convert_fn(out)
+        case "INCModelForQuestionAnswering":
+            out = out[0]["answer"] if isinstance(out, list) else out["answer"]
+
+    return [out]
 
 if __name__ == "__main__":
     run_inference_from_line(sys.argv[1], sys.argv[2])

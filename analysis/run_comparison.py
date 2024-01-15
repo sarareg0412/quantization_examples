@@ -3,13 +3,12 @@ import csv
 import evaluate
 from utils import *
 
-exact_match_references = evaluate.load("exact_match", module_type="comparison")
+
 exact_match = evaluate.load("exact_match")
-accuracy = evaluate.load("accuracy")
 
 def run_comparison(model_data):
     data = (load_dataset(model_data["dataset"], model_data["dataset_config_name"], split="test"))
-    #data = (data.train_test_split(train_size=0.05, seed=SEED)["train"])
+    data = (data.train_test_split(train_size=0.05, seed=SEED)["train"])
             #.select(range(500))) # Use 50% of test dataset to run comparison
     # Get processor (image processor, tokenizer etc.)
     #processor = get_processor_from_category(model_data["category"], model_data["model_name"])
@@ -24,8 +23,7 @@ def run_comparison(model_data):
     #nq_pipe = pipeline(model_data["task"], model=nq_model, tokenizer=processor)
     #q_pipe = pipeline(model_data["task"], model=q_model, tokenizer=processor)
     # Initialize lists to store references and predictions for accuracy evaluation
-    label_column = "label" if "label" in data.column_names else "labels"
-    references = data[label_column]
+    references = get_references(model_data["category"], data)
 
     print(f"Evaluating Data for model {model_data['model_name']} and "
           f"Dataset {model_data['dataset']}/{model_data['dataset_config_name']}")
@@ -46,11 +44,48 @@ def run_comparison(model_data):
         # Read the remaining rows into a list
         q_predictions = reduce_to_1D_list(list(csv_reader))
 
+    nq_predictions = get_predictions(model_data["category"], nq_predictions)
+    q_predictions = get_predictions(model_data["category"], q_predictions)
     # Calculate accuracy using the loaded accuracy metric
     exact_match_score = exact_match.compute(predictions=q_predictions, references=nq_predictions)
-    NQ_accuracy = accuracy.compute(predictions=nq_predictions, references=references)
-    Q_accuracy = accuracy.compute(predictions=q_predictions, references=references)
 
-    print(f"NQ model accuracy score is : {NQ_accuracy}")
-    print(f"Q model accuracy score is : {Q_accuracy}")
+    metric = get_metric(model_data["category"])
+    NQ_accuracy = metric.compute(predictions=nq_predictions, references=references)
+    Q_accuracy = metric.compute(predictions=q_predictions, references=references)
+
+    print(f"NQ model metric score is : {NQ_accuracy}")
+    print(f"Q model metric score is : {Q_accuracy}")
     print(f"Exact match score is : {exact_match_score}")
+
+
+def get_references(category, data):
+    references = []
+    match category:
+        case "INCModelForSequenceClassification":
+            label_column = "label" if "label" in data.column_names else "labels"
+            references = data[label_column]
+        case "INCModelForQuestionAnswering":
+            references = list(map(lambda example: {"id": example["id"], "answers":example["answers"]},
+                                                        data))
+
+    return references
+
+
+def get_predictions(category, prediction):
+    references = []
+    match category:
+        case "INCModelForQuestionAnswering":
+            prediction = list(map(lambda example: {"id": None, "prediction_text":example},
+                                                        prediction))
+
+    return references
+
+def get_metric(category):
+    metric = None
+    match category:
+        case "INCModelForSequenceClassification":
+            metric = evaluate.load("accuracy")
+        case "INCModelForQuestionAnswering":
+            metric = evaluate.load("squad")
+
+    return metric

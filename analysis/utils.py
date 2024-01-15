@@ -5,14 +5,14 @@ import matplotlib.pyplot as plt
 import os
 import seaborn as sns;
 from optimum.intel import (
-    INCModelForSequenceClassification, 
-    INCModelForQuestionAnswering, 
-    INCModelForTokenClassification, 
+    INCModelForSequenceClassification,
+    INCModelForQuestionAnswering,
+    INCModelForTokenClassification,
     INCModelForMultipleChoice,
     INCModelForMaskedLM,
     INCModelForCausalLM,
     INCModelForSeq2SeqLM
-    )
+)
 from transformers import (
     AutoModelForSequenceClassification,
     AutoModelForQuestionAnswering,
@@ -20,13 +20,13 @@ from transformers import (
     AutoModelForMultipleChoice,
     AutoModelForMaskedLM,
     AutoModelForCausalLM,
-    AutoModelForSeq2SeqLM
+    AutoModelForSeq2SeqLM, SquadExample
 )
 
 sns.set()
 import numpy as np
 import torch
-
+from tqdm import tqdm
 from datasets import load_dataset
 from transformers import AutoTokenizer
 
@@ -53,20 +53,20 @@ category_dict = {"multi-modal": ["feature-extraction", "text-to-image", "image-t
                  }
 categories = ["multi-modal", "computer-vision", "natural-language-processing", "audio", "tabular",
               "reinforcement-learning"]
-INC_tasks = ["INCModelForSequenceClassification", "INCModelForQuestionAnswering","INCModelForTokenClassification",
+INC_tasks = ["INCModelForSequenceClassification", "INCModelForQuestionAnswering", "INCModelForTokenClassification",
              "INCModelForMultipleChoice", "INCModelForMaskedLM", "INCModelForCausalLM", "INCModelForSeq2SeqLM"]
-INC_dict = {"INCModelForSequenceClassification":["text-classification"],
-             "INCModelForQuestionAnswering": ["question-answering"],
-             "INCModelForTokenClassification":["token-classification"],
-             "INCModelForMultipleChoice":["multiple-choice"],
-             "INCModelForMaskedLM":["fill-mask"],
-             "INCModelForCausalLM":["text-generation"],
-             "INCModelForSeq2SeqLM":["translation", "conversational", "image-to-text", "summarization"]}
+INC_dict = {"INCModelForSequenceClassification": ["text-classification"],
+            "INCModelForQuestionAnswering": ["question-answering"],
+            "INCModelForTokenClassification": ["token-classification"],
+            "INCModelForMultipleChoice": ["multiple-choice"],
+            "INCModelForMaskedLM": ["fill-mask"],
+            "INCModelForCausalLM": ["text-generation"],
+            "INCModelForSeq2SeqLM": ["translation", "conversational", "image-to-text", "summarization"]}
 csv_name = "model_data.csv"
 csv_header = ['model_name', 'likes', 'downloads', 'category', 'task', 'library', 'dataset', 'dataset_config_name']
 N_MODELS = 50
 SIMPLE_FILTER = False
-N_EXPERIMENTS = 30
+N_EXPERIMENTS = 0
 SEED = 42
 QUANT_SPLIT_PERCENT = 0.2  # Quantization split percentage
 
@@ -171,7 +171,7 @@ def get_quantized_model_from_category(task, model_location):
     return model
 
 
-def get_model_from_library(library, category, model_path, quantized= False):
+def get_model_from_library(library, category, model_path, quantized=False):
     model = None
     # Switch to retrieve the model class from the different kinds of libraries
     match library:
@@ -191,8 +191,8 @@ def get_quantized_model_path(category, model_name):
 def get_processor_from_category(category, model_name):
     processor = None
     match category:
-        case ("INCModelForSequenceClassification"| "INCModelForQuestionAnswering"| "INCModelForTokenClassification"|
-              "INCModelForMultipleChoice"| "INCModelForMaskedLM"| "INCModelForCausalLM"| "INCModelForSeq2SeqLM"):
+        case ("INCModelForSequenceClassification" | "INCModelForQuestionAnswering" | "INCModelForTokenClassification" |
+              "INCModelForMultipleChoice" | "INCModelForMaskedLM" | "INCModelForCausalLM" | "INCModelForSeq2SeqLM"):
             processor = AutoTokenizer.from_pretrained(model_name)
 
     return processor
@@ -211,3 +211,27 @@ def get_dataset_from_name(ds_name, ds_config, percent):
     data = (load_dataset(ds_name, ds_config, split="test"))
     data = data.train_test_split(train_size=percent, seed=SEED)["train"]  # Use x% of test dataset
     return data
+
+
+def create_squad_examples(dataset):
+    squad_examples = []
+
+    print("Preprocessing dataset")
+    for example in dataset:
+        context = example['context']
+        question = example['question']
+        answer_text = example["answers"]["text"][0]
+        start_position = example["answers"]["answer_start"][0]
+
+        squad_example = SquadExample(
+            qas_id=example['id'],
+            question_text=question,
+            context_text=context,
+            answer_text=answer_text,
+            title=None,
+            start_position_character=start_position,
+        )
+
+        squad_examples.append(squad_example)
+
+    return squad_examples

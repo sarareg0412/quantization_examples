@@ -8,12 +8,11 @@ from run_comparison import run_comparison
 from run_quantization import run_quantization
 
 DEBUG = False
-
+cat = "QuestionAnswering"
+model_id = 2
 
 def get_models_line_from_csv(category):
     filename = "./INC_models/INCModelFor{}_{}".format(category, csv_name)
-    #if category is not None:
-    #    filename = "../models_csv/{}_{}".format(category, csv_name)
     with open(filename) as file:
         csvReader = csv.reader(file)
         # ['model_name', 'likes', 'downloads', 'category', 'task', 'library', 'dataset', 'dataset_config_name']
@@ -25,8 +24,8 @@ def get_models_line_from_csv(category):
 
 
 def quantize_and_measure_consumption():
-    top_N_models = get_models_line_from_csv("SequenceClassification")
-    line = top_N_models[2]  # cardiffNLP
+    top_N_models = get_models_line_from_csv(cat)
+    line = top_N_models[model_id]  # bart-large-cnn
     model_data = get_model_data_from_line(line)
 
     model_name_formatted = format_name(model_data["model_name"])
@@ -44,22 +43,24 @@ def quantize_and_measure_consumption():
         energy_output_file = "{}/{}_quant_exp{}.csv".format(save_energy_file_dir, model_name_formatted, n_experiment)
         print("START QUANTIZATION FOR MODEL {} - EXP {}".format(model_data["model_name"], n_experiment))
         if DEBUG:
-            run_quantization(energy_output_file)
+            subprocess.run([
+                            #"../energibridge", "-o", "{}".format(energy_output_file),
+                            "python", "run_quantization.py", "{}".format(save_model_dir),
+                                                             "{}".format(line)
+                            ])
         else:
             subprocess.run([
                             #"../energibridge", "-o", "{}".format(energy_output_file),
                             "optimum-cli", "inc", "quantize", "--model","{}".format(model_data["model_name"]),
                             "--output", "{}".format(save_model_dir)
-                            #"python", "run_quantization.py", "{}".format(save_model_dir),
-                            #                                 "{}".format(line)
                             ])
         print("END QUANTIZATION FOR MODEL {} - EXP {}".format(model_data["model_name"], n_experiment))
 
 
 def infer_and_measure_consumption(quantized):
     # Load models from csv file
-    top_N_models = get_models_line_from_csv("SequenceClassification")
-    line = top_N_models[2]  # cardiffNLP
+    top_N_models = get_models_line_from_csv(cat)
+    line = top_N_models[model_id]  # cardiffNLP
 
     model_data = get_model_data_from_line(line)
     model_name_formatted = format_name(model_data["model_name"])
@@ -91,8 +92,8 @@ def infer_and_measure_consumption(quantized):
 
 def compare_models():
     # Load models from csv file
-    top_N_models = get_models_line_from_csv("SequenceClassification")
-    line = top_N_models[2]  # cardiffNLP
+    top_N_models = get_models_line_from_csv(cat)
+    line = top_N_models[model_id]  # cardiffNLP
     model_data = get_model_data_from_line(line)
     #for n_experiment in range(0, N_EXPERIMENTS + 1):
     run_comparison(model_data)
@@ -100,6 +101,6 @@ def compare_models():
 
 
 #quantize_and_measure_consumption()
-infer_and_measure_consumption(True)
+#infer_and_measure_consumption(True)
 #infer_and_measure_consumption(False)
-#compare_models()
+compare_models()
