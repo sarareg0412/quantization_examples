@@ -1,7 +1,7 @@
 import csv
 import sys
 
-from tqdm.auto import tqdm
+from tqdm import tqdm as t
 from transformers.pipelines.pt_utils import KeyDataset
 
 from utils import *
@@ -36,7 +36,7 @@ def run_inference_from_line(quantized, line):
 
     with open(output_file_name, mode='w', newline='') as file:
         writer = csv.writer(file)
-        for out in tqdm(pipe(data), total=len(data)):
+        for out in t(pipe(data), total=len(data)):
             # Since there might be multiple labels with multiple scores associated, we get the first one.
             prediction = get_prediction(out,model_data["category"], model.config.label2id)
             writer.writerow(prediction)

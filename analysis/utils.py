@@ -66,7 +66,7 @@ csv_name = "model_data.csv"
 csv_header = ['model_name', 'likes', 'downloads', 'category', 'task', 'library', 'dataset', 'dataset_config_name']
 N_MODELS = 50
 SIMPLE_FILTER = False
-N_EXPERIMENTS = 0
+N_EXPERIMENTS = 30
 SEED = 42
 QUANT_SPLIT_PERCENT = 0.2  # Quantization split percentage
 TEST_DATA_PERCENT = 0.5
@@ -216,7 +216,7 @@ def get_dataset_from_name(ds_name, ds_config, percent):
 def create_squad_examples(dataset):
     squad_examples = []
 
-    print("Preprocessing dataset")
+    print("Preprocessing dataset...")
     for example in dataset:
         context = example['context']
         question = example['question']
@@ -233,7 +233,7 @@ def create_squad_examples(dataset):
         )
 
         squad_examples.append(squad_example)
-
+    print("Done.")
     return squad_examples
 
 

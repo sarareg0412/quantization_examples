@@ -62,7 +62,10 @@ def get_references(category, data):
             label_column = "label" if "label" in data.column_names else "labels"
             references = data[label_column]
         case "INCModelForQuestionAnswering":
-            references = list(map(lambda example: {"id": example["id"], "answers": example["answers"]},
+
+            references = list(map(lambda example: {"id": example["id"],
+                                                   "answers": {"answer_start":example["answers"]["answer_start"],
+                                                               "text": [normalize_text(s) for s in example["answers"]["text"]]}},
                                   data))
 
     return references
@@ -71,7 +74,8 @@ def get_references(category, data):
 def get_predictions(category, prediction, references=None):
     match category:
         case "INCModelForQuestionAnswering":
-            prediction = [{"id": references[i]["id"], "prediction_text": example} for i,example in enumerate(prediction)]
+            prediction = [{"id": references[i]["id"], "prediction_text": normalize_text(example)} for
+                          i,example in enumerate(prediction)]
 
     return prediction
 
