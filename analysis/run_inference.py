@@ -36,8 +36,6 @@ def run_inference_from_line(quantized, line):
 
     with open(output_file_name, mode='w', newline='') as file:
         writer = csv.writer(file)
-        # Write the header
-        writer.writerow(["label"])
         for out in tqdm(pipe(data)):
             # Since there might be multiple labels with multiple scores associated, we get the first one.
             prediction = get_prediction(out,model_data["category"], model.config.label2id)
@@ -79,14 +77,15 @@ def map_data(data, category):
 
 
 def get_prediction(out, category, convert_fn):
+    res = []
     match category:
         case "INCModelForSequenceClassification":
-            out = out[0]['label'] if isinstance(out['label'], list) else out['label']
-            out = convert_fn(out)
+            res = out[0]['label'] if isinstance(out['label'], list) else out['label']
+            res.append(convert_fn(res))
         case "INCModelForQuestionAnswering":
-            out = out[0]["answer"] if isinstance(out, list) else out["answer"]
+            res.append(out[0]["answer"] if isinstance(out, list) else out["answer"])
 
-    return [out]
+    return res
 
 if __name__ == "__main__":
     run_inference_from_line(sys.argv[1], sys.argv[2])

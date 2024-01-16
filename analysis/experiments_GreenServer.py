@@ -9,7 +9,7 @@ from run_quantization import run_quantization
 
 DEBUG = False
 cat = "QuestionAnswering"
-model_id = 2
+model_id = 0
 
 def get_models_line_from_csv(category):
     filename = "./INC_models/INCModelFor{}_{}".format(category, csv_name)
@@ -101,6 +101,6 @@ def compare_models():
 
 
 #quantize_and_measure_consumption()
-#infer_and_measure_consumption(True)
+infer_and_measure_consumption(True)
 #infer_and_measure_consumption(False)
-compare_models()
+#compare_models()
