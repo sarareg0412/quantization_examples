@@ -69,7 +69,7 @@ SIMPLE_FILTER = False
 N_EXPERIMENTS = 0
 SEED = 42
 QUANT_SPLIT_PERCENT = 0.2  # Quantization split percentage
-
+TEST_DATA_PERCENT = 0.5
 
 def print_size_of_model(model):
     torch.save(model.state_dict(), "temp.p")
@@ -220,8 +220,8 @@ def create_squad_examples(dataset):
     for example in dataset:
         context = example['context']
         question = example['question']
-        answer_text = example["answers"]["text"][0]
-        start_position = example["answers"]["answer_start"][0]
+        answer_text = example["answers"]["text"][0] if len(example["answers"]["text"]) > 0 else ''
+        start_position = example["answers"]["answer_start"][0] if len(example["answers"]["answer_start"]) > 0 else None
 
         squad_example = SquadExample(
             qas_id=example['id'],

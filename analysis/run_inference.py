@@ -12,7 +12,7 @@ from datasets import load_dataset
 def run_inference_from_line(quantized, line):
     model_data = get_model_data_from_line(line)
     data = (load_dataset(model_data["dataset"], model_data["dataset_config_name"], split="test"))
-    data = (data.train_test_split(train_size=0.05, seed=SEED)["train"])
+    data = (data.train_test_split(train_size=TEST_DATA_PERCENT, seed=SEED)["train"])
             #.select(range(500)))  # Use 50% of test dataset to make inference
 
     quantized = True if (quantized == "True") else False
@@ -36,7 +36,7 @@ def run_inference_from_line(quantized, line):
 
     with open(output_file_name, mode='w', newline='') as file:
         writer = csv.writer(file)
-        for out in tqdm(pipe(data)):
+        for out in tqdm(pipe(data), total=len(data)):
             # Since there might be multiple labels with multiple scores associated, we get the first one.
             prediction = get_prediction(out,model_data["category"], model.config.label2id)
             writer.writerow(prediction)
