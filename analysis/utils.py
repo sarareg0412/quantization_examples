@@ -3,7 +3,7 @@ from functools import reduce
 import pandas as pd
 import matplotlib.pyplot as plt
 import os
-import seaborn as sns;
+import seaborn as sns
 from optimum.intel import (
     INCModelForSequenceClassification,
     INCModelForQuestionAnswering,
@@ -66,10 +66,11 @@ csv_name = "model_data.csv"
 csv_header = ['model_name', 'likes', 'downloads', 'category', 'task', 'library', 'dataset', 'dataset_config_name']
 N_MODELS = 50
 SIMPLE_FILTER = False
-N_EXPERIMENTS = 30
+N_EXPERIMENTS = 0
 SEED = 42
 QUANT_SPLIT_PERCENT = 0.2  # Quantization split percentage
-TEST_DATA_PERCENT = 0.5
+TEST_DATA_PERCENT = 0.05
+
 
 def print_size_of_model(model):
     torch.save(model.state_dict(), "temp.p")
@@ -85,19 +86,23 @@ def format_name(name):
     return name.replace("/", "-")
 
 
-def generate_metric_charts(path: str, model_name, workloads: [str]):
+def generate_metric_charts(path: str, model_name):
     fig, ax = plt.subplots(figsize=[5, 3])
     ax.set_ylim(0, 60)
-    ax.set_xlim(0, 100)
+    ax.set_xlim(0, 50)
 
-    for workload in workloads:
-        all_data = []
-        if not os.path.isdir(path):
-            continue
-        for csv_file in os.listdir(path):
+    all_data = []
+    if not os.path.isdir(path):
+        print(f"Path {path} not found")
+    else:
+        files = os.listdir(path)
+        sorted_files = sorted(files, key=lambda x: x.split('_')[2])
+        for csv_file in sorted_files:
             if not csv_file.endswith(".csv"):
                 continue
+            print(f"Reading csv file {csv_file}")
             df = pd.read_csv(os.path.join(path, csv_file))
+            print("Done.")
             key = "PACAKGE_ENERGY (W)"
             if "CPU_ENERGY (J)" in df.columns:
                 key = "CPU_ENERGY (J)"
@@ -114,19 +119,75 @@ def generate_metric_charts(path: str, model_name, workloads: [str]):
                         data[i] = (data[i] - df[key + "_original"][i - 1]) * (1000 / df["Delta"][i])
                     else:
                         data[i] = 0
-            # data = data[1:-1] # take out first experiment
+            data = data[1:-1]  # take out first read
             for i in range(0, len(data)):
                 all_data.append({"Time": i, "CPU_POWER (Watts)": data[i]})
 
         plot = sns.lineplot(data=pd.DataFrame(all_data), x="Time", y="CPU_POWER (Watts)", estimator=np.median,
-                            errorbar=lambda x: (np.quantile(x, 0.25), np.quantile(x, 0.75)), ax=ax, legend=True,
-                            label=workload.title())
-        plot.set(xlabel=None, ylabel=None)
-        title = f"{model_name}_energy_data_plot.pdf"
+                            errorbar=lambda x: (np.quantile(x, 0.25), np.quantile(x, 0.75)), ax=ax, legend=True)
+        plot.set(xlabel="Time", ylabel="CPU_POWER (Watts)")
+        title = f"{model_name}_quant_energy_data_plot.pdf"
         plot.set_title(title)
-
-    plot.get_figure().savefig(os.path.join(f"{path}/{title}"))
+        plot.get_figure().savefig(os.path.join(f"./plots/{title}"))
     # plt.show()
+
+
+def avg_metric(df: pd.DataFrame, metric_name: str):
+    all_data = None
+    nb_point = 0
+    for metric in df.columns[1:]:
+        if metric_name in metric:
+            nb_point += 1
+            if all_data is None:
+                all_data = df[metric].copy()
+            else:
+                all_data += df[metric]
+    return all_data / nb_point
+
+
+def generate_metric_charts_csv(csv_file):
+    all_data = []
+    if not os.path.exists(csv_file):
+        raise ValueError(f'{csv_file} does not exist')
+    df = pd.read_csv(csv_file)
+    key = "PACKAGE_ENERGY (W)"
+    if "CPU_ENERGY (J)" in df.columns:
+        key = "CPU_ENERGY (J)"
+    if "PACKAGE_ENERGY (J)" in df.columns:
+        key = "PACKAGE_ENERGY (J)"
+    if "SYSTEM_POWER (Watts)" in df.columns:
+        key = "SYSTEM_POWER (Watts)"
+    data = df[key].copy().to_list()
+    if key != "CPU_POWER (Watts)" and key != "SYSTEM_POWER (Watts)":
+        df[key + "_original"] = df[key].copy()
+        for i in range(0, len(data)):
+            if i in df[key + "_original"] and i - 1 in df[key + "_original"]:
+                # diff with previous value and convert to watts
+                data[i] = (data[i] - df[key + "_original"][i - 1]) * (1000 / df["Delta"][i])
+            else:
+                data[i] = 0
+    # data = data[1:-1]
+    for i in range(0, len(data)):
+        all_data.append({"Time": i, "CPU_POWER (Watts)": data[i]})
+    fig, ax = plt.subplots(figsize=(10, 5))
+    ax.plot(data, label="CPU Power")
+    ax.set_ylabel('watts')
+
+    ax2 = ax.twinx()
+
+    # ax2.plot(avg_metric(df, "CPU_TEMP"), label="CPU TEMP (C)", color="red")
+    ax2.plot(avg_metric(df, "CPU_USAGE"), label="CPU USAGE (%)", color="orange")
+    ax2.plot(df["USED_MEMORY"] * 100 / df["TOTAL_MEMORY"], label="Used Memory (%)", color="green")
+    ax2.set_ylim([0, 100])
+
+    ax.set(xlabel=None)
+    fig.legend(loc='upper right')
+    fig.tight_layout()
+    plt.show()
+
+
+# generate_metric_charts("../../../../ENERGY_DATA/anakin/quant_energy_data", "anakin87_electra-italian-xxl-cased")
+# generate_metric_charts_csv("../../../../ENERGY_DATA/anakin/quant_energy_data/anakin87-electra-italian-xxl-cased-squad-it_quant_exp00.csv", )
 
 
 def get_model_from_category(task, model_location):
@@ -216,7 +277,6 @@ def get_dataset_from_name(ds_name, ds_config, percent):
 def create_squad_examples(dataset):
     squad_examples = []
 
-    print("Preprocessing dataset...")
     for example in dataset:
         context = example['context']
         question = example['question']
@@ -233,7 +293,6 @@ def create_squad_examples(dataset):
         )
 
         squad_examples.append(squad_example)
-    print("Done.")
     return squad_examples
 
 
@@ -256,3 +315,15 @@ def normalize_text(s):
         return text.lower()
 
     return white_space_fix(remove_articles(remove_punc(lower(s))))
+
+# generate_metric_charts("../../../../ENERGY_DATA/cardiff-latest/quant_energy_data")
+# Masked LM
+
+
+def create_maskedlm_examples(data):
+    data.map(
+        preprocess_function()
+    )
+def preprocess_function(tokenizer, examples):
+    return tokenizer([" ".join(x) for x in examples["answers.text"]])
+

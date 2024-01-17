@@ -67,11 +67,16 @@ def run_inference_from_line(quantized, line):
         """
 
 def map_data(data, category):
+    print("Preprocessing dataset...")
     match category:
         case "INCModelForSequenceClassification":
             data = KeyDataset(data, "text")
         case "INCModelForQuestionAnswering":
             data = create_squad_examples(data)
+        case "INCModelForMaskedLM":
+            data = create_maskedlm_examples(data)
+
+    print("Done.")
 
     return data
 

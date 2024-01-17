@@ -8,8 +8,8 @@ from run_comparison import run_comparison
 from run_quantization import run_quantization
 
 DEBUG = False
-cat = "QuestionAnswering"
-model_id = 2
+cat = "MaskedLM"
+model_id = 0
 
 
 def get_models_line_from_csv(category):
@@ -103,7 +103,7 @@ def compare_models():
     run_comparison(model_data)
 
 
-# quantize_and_measure_consumption()
-#infer_and_measure_consumption(True)
+#quantize_and_measure_consumption()
+infer_and_measure_consumption(True)
 # infer_and_measure_consumption(False)
-compare_models()
+#compare_models()
