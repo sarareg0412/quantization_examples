@@ -32,7 +32,7 @@ def run_inference_from_line(quantized, line):
           f"{model_data['dataset']}/{model_data['dataset_config_name']}")
 
     # map the dataset based on the category
-    data = map_data(data,model_data["category"])
+    data = map_data(data,model_data)
 
     with open(output_file_name, mode='w', newline='') as file:
         writer = csv.writer(file)
@@ -66,7 +66,8 @@ def run_inference_from_line(quantized, line):
             predictions.append(model.config.label2id[predicted_label])  # Map the predicted label using the model's label2id attribute
         """
 
-def map_data(data, category):
+def map_data(data, model_data):
+    category = model_data["category"]
     print("Preprocessing dataset...")
     match category:
         case "INCModelForSequenceClassification":
@@ -74,7 +75,7 @@ def map_data(data, category):
         case "INCModelForQuestionAnswering":
             data = create_squad_examples(data)
         case "INCModelForMaskedLM":
-            data = create_maskedlm_examples(data)
+            data = ListDataset(create_maskedlm_examples2(data, model_data["model_name"]))
 
     print("Done.")
 
@@ -89,10 +90,10 @@ def get_prediction(out, category, convert_fn):
             res.append(convert_fn(res))
         case "INCModelForQuestionAnswering":
             res.append(out[0]["answer"] if isinstance(out, list) else out["answer"])
-
+        case "INCModelForMaskedLM":
+            res.append(out[0]["token_str"])
     return res
+
 
 if __name__ == "__main__":
     run_inference_from_line(sys.argv[1], sys.argv[2])
-    #run_evaluation_from_line("True",
-    #                         "cardiffnlp/twitter-roberta-base-sentiment-latest,277,22948384,INCModelForSequenceClassification,text-classification,transformers,tweet_eval,sentiment")

@@ -87,9 +87,9 @@ def infer_and_measure_consumption(quantized):
         print("START INFERENCE FOR {}MODEL {} - EXP {}".format("QUANTIZED " if quantized else "",
                                                                model_data["model_name"], n_experiment))
         subprocess.run([
-            # "../energibridge", "-o", "{}".format(energy_output_file),
-            "python", "run_inference.py", "{}".format(str(quantized)),
-            "{}".format(line)])
+                        # "../energibridge", "-o", "{}".format(energy_output_file),
+                        "python", "run_inference.py", "{}".format(str(quantized)),
+                        "{}".format(line)])
         print("END INFERENCE FOR {}MODEL {} - EXP {}".format("QUANTIZED " if quantized else "",
                                                              model_data["model_name"], n_experiment))
 
@@ -105,5 +105,5 @@ def compare_models():
 
 #quantize_and_measure_consumption()
 infer_and_measure_consumption(True)
-# infer_and_measure_consumption(False)
+#infer_and_measure_consumption(False)
 #compare_models()

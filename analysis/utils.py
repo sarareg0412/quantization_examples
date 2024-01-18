@@ -1,4 +1,5 @@
 from functools import reduce
+import random
 
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -13,6 +14,7 @@ from optimum.intel import (
     INCModelForCausalLM,
     INCModelForSeq2SeqLM
 )
+from torch.utils.data import Dataset
 from transformers import (
     AutoModelForSequenceClassification,
     AutoModelForQuestionAnswering,
@@ -26,7 +28,6 @@ from transformers import (
 sns.set()
 import numpy as np
 import torch
-from tqdm import tqdm
 from datasets import load_dataset
 from transformers import AutoTokenizer
 
@@ -320,10 +321,97 @@ def normalize_text(s):
 # Masked LM
 
 
-def create_maskedlm_examples(data):
-    data.map(
-        preprocess_function()
-    )
-def preprocess_function(tokenizer, examples):
-    return tokenizer([" ".join(x) for x in examples["answers.text"]])
+def create_maskedlm_examples(data, model_name):
+    random.seed(10)
+    tokenizer = get_processor_from_category("INCModelForMaskedLM", model_name)
+    mask_token = tokenizer.mask_token_id
 
+    def preprocess_function(example):
+        return tokenizer(example["whole_func_string"])
+
+    # Start tokenzing the input data
+    data_tokenized = data.map(
+        preprocess_function,
+        remove_columns=data.column_names
+    )
+    def mask_random_token(example):
+        tokens = example["input_ids"]
+        random_index = np.random.randint(0,len(tokens))
+        tokens[random_index] = mask_token
+        example["token_masked"] = tokens
+        return example
+
+    # Then mask one of the input data tokens
+    data_tokenized = data_tokenized.map(
+        mask_random_token
+    )
+    def decode_example(example):
+        example["masked_string"] = tokenizer.decode(example["token_masked"])
+        return example
+
+    # Lastly decode the data
+    data_tokenized = data_tokenized.map(
+        mask_random_token
+    )
+
+    lm_datasets = data_tokenized.map(
+        decode_example,
+    )
+
+    return [x["masked_string"] for x in lm_datasets]
+def create_maskedlm_examples2(data, model_name):
+    random.seed(10)
+    tokenizer = get_processor_from_category("INCModelForMaskedLM", model_name)
+    mask_token = tokenizer.mask_token_id
+    def tokenize_function(examples):
+        return tokenizer(examples["whole_func_string"])
+
+    data_tokenized = data.map(tokenize_function, batched=True, remove_columns=data.column_names)
+
+    block_size = 128
+    def group_texts(examples):
+        # Concatenate all texts.
+        concatenated_examples = {k: sum(examples[k], []) for k in examples.keys()}
+        total_length = len(concatenated_examples[list(examples.keys())[0]])
+        # We drop the small remainder, we could add padding if the model supported it instead of this drop, you can
+        # customize this part to your needs.
+        total_length = (total_length // block_size) * block_size
+        # Split by chunks of max_len.
+        result = {
+            k: [t[i: i + block_size] for i in range(0, total_length, block_size)]
+            for k, t in concatenated_examples.items()
+        }
+        result["labels"] = result["input_ids"].copy()
+        return result
+
+    data_tokenized = data_tokenized.map(
+        group_texts,
+        batched=True,
+        batch_size=1000,
+        num_proc=4,
+    )
+
+    def mask_random_token(example):
+        tokens = example["input_ids"]
+        random_index = np.random.randint(0,len(tokens))
+        tokens[random_index] = mask_token
+        example["input_ids"] = tokens
+        return example
+
+    # Then mask one of the input data tokens
+    data_tokenized = data_tokenized.map(
+        mask_random_token
+    )
+
+    return [tokenizer.decode(x["input_ids"]) for x in data_tokenized]
+
+
+class ListDataset(Dataset):
+    def __init__(self, original_list):
+        self.original_list = original_list
+
+    def __len__(self):
+        return len(self.original_list)
+
+    def __getitem__(self, i):
+        return self.original_list[i]
