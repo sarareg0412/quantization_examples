@@ -104,6 +104,6 @@ def compare_models():
 
 
 #quantize_and_measure_consumption()
-infer_and_measure_consumption(True)
+#infer_and_measure_consumption(True)
 #infer_and_measure_consumption(False)
-#compare_models()
+compare_models()

@@ -7,21 +7,14 @@ exact_match = evaluate.load("exact_match")
 
 
 def run_comparison(model_data):
-    data = (load_dataset(model_data["dataset"], model_data["dataset_config_name"], split="test"))
-    data = (data.train_test_split(train_size=TEST_DATA_PERCENT, seed=SEED)["train"])
-    # .select(range(500))) # Use 50% of test dataset to run comparison
-    # Get processor (image processor, tokenizer etc.)
-    # processor = get_processor_from_category(model_data["category"], model_data["model_name"])
-    # No need to retrieve the non quantized model as we only need its name to retrieve it from the hub
-    # Retrieve quantized model by its configuration.
-    # nq_model = get_model_from_library(model_data["library"], model_data["category"], model_data["model_name"])
-    # q_model = get_model_from_library(model_data["library"], model_data["category"],
-    #                                 get_quantized_model_path(model_data["category"], model_data["model_name"]),
-    #                                 quantized=True
-    #                                 )
-    # Setup non quantized and quantized model pipeline for inference
-    # nq_pipe = pipeline(model_data["task"], model=nq_model, tokenizer=processor)
-    # q_pipe = pipeline(model_data["task"], model=q_model, tokenizer=processor)
+    dataset_file_path = f"INCModelForMaskedLM/{format_name(model_data['model_name'])}/dataset.csv"
+    if (os.path.isfile(dataset_file_path)):
+        print(f"Reading {dataset_file_path} as dataset")
+        data = read_csv(dataset_file_path, ["masked_input", "true_label"], 1)
+    else:
+        print(f"Loading dataset from hub")
+        data = (load_dataset(model_data["dataset"], model_data["dataset_config_name"], split="test"))
+        data = (data.train_test_split(train_size=TEST_DATA_PERCENT, seed=SEED)["train"])
     # Initialize lists to store references and predictions for accuracy evaluation
     references = get_references(model_data["category"], data)
 
@@ -67,6 +60,8 @@ def get_references(category, data):
                                                    "answers": {"answer_start":example["answers"]["answer_start"],
                                                                "text": [normalize_text(s) for s in example["answers"]["text"]]}},
                                   data))
+        case "INCModelForMaskedLM":
+            references = data   # The token is already loaded
 
     return references
 
@@ -83,7 +78,7 @@ def get_predictions(category, prediction, references=None):
 def get_metric(category):
     metric = None
     match category:
-        case "INCModelForSequenceClassification":
+        case "INCModelForSequenceClassification"| "INCModelForMaskedLM":
             metric = evaluate.load("accuracy")
         case "INCModelForQuestionAnswering":
             metric = evaluate.load("squad")

@@ -91,7 +91,7 @@ def get_prediction(out, category, convert_fn):
         case "INCModelForQuestionAnswering":
             res.append(out[0]["answer"] if isinstance(out, list) else out["answer"])
         case "INCModelForMaskedLM":
-            res.append(out[0]["token_str"])
+            res.append(out[0]["token"])
     return res
 
 

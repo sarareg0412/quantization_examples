@@ -1,3 +1,5 @@
+import ast
+import csv
 from functools import reduce
 import random
 
@@ -317,93 +319,73 @@ def normalize_text(s):
 
     return white_space_fix(remove_articles(remove_punc(lower(s))))
 
+
 # generate_metric_charts("../../../../ENERGY_DATA/cardiff-latest/quant_energy_data")
 # Masked LM
-
-
-def create_maskedlm_examples(data, model_name):
-    random.seed(10)
-    tokenizer = get_processor_from_category("INCModelForMaskedLM", model_name)
-    mask_token = tokenizer.mask_token_id
-
-    def preprocess_function(example):
-        return tokenizer(example["whole_func_string"])
-
-    # Start tokenzing the input data
-    data_tokenized = data.map(
-        preprocess_function,
-        remove_columns=data.column_names
-    )
-    def mask_random_token(example):
-        tokens = example["input_ids"]
-        random_index = np.random.randint(0,len(tokens))
-        tokens[random_index] = mask_token
-        example["token_masked"] = tokens
-        return example
-
-    # Then mask one of the input data tokens
-    data_tokenized = data_tokenized.map(
-        mask_random_token
-    )
-    def decode_example(example):
-        example["masked_string"] = tokenizer.decode(example["token_masked"])
-        return example
-
-    # Lastly decode the data
-    data_tokenized = data_tokenized.map(
-        mask_random_token
-    )
-
-    lm_datasets = data_tokenized.map(
-        decode_example,
-    )
-
-    return [x["masked_string"] for x in lm_datasets]
 def create_maskedlm_examples2(data, model_name):
-    random.seed(10)
+    dataset_file_path = f"INCModelForMaskedLM/{format_name(model_name)}/dataset.csv"
     tokenizer = get_processor_from_category("INCModelForMaskedLM", model_name)
-    mask_token = tokenizer.mask_token_id
-    def tokenize_function(examples):
-        return tokenizer(examples["whole_func_string"])
+    if (os.path.isfile(dataset_file_path)):
+        print(f"Reading {dataset_file_path} as dataset")
+        dataset = read_csv(dataset_file_path, ["masked_input", "true_label"])
+        # Convert the string of tokens into an array
+        dataset = [ast.literal_eval(line) for line in dataset]
+        # Decode the list of tokens as a dataset
+        dataset = [tokenizer.decode(line) for line in dataset]
+        return dataset
+    else:
+        random.seed(10)
+        mask_token = tokenizer.mask_token_id
 
-    data_tokenized = data.map(tokenize_function, batched=True, remove_columns=data.column_names)
+        def tokenize_function(examples):
+            return tokenizer(examples["whole_func_string"])
 
-    block_size = 128
-    def group_texts(examples):
-        # Concatenate all texts.
-        concatenated_examples = {k: sum(examples[k], []) for k in examples.keys()}
-        total_length = len(concatenated_examples[list(examples.keys())[0]])
-        # We drop the small remainder, we could add padding if the model supported it instead of this drop, you can
-        # customize this part to your needs.
-        total_length = (total_length // block_size) * block_size
-        # Split by chunks of max_len.
-        result = {
-            k: [t[i: i + block_size] for i in range(0, total_length, block_size)]
-            for k, t in concatenated_examples.items()
-        }
-        result["labels"] = result["input_ids"].copy()
-        return result
+        data_tokenized = data.map(tokenize_function, batched=True, remove_columns=data.column_names)
 
-    data_tokenized = data_tokenized.map(
-        group_texts,
-        batched=True,
-        batch_size=1000,
-        num_proc=4,
-    )
+        # TODO set block_size = tokenizer.model_max_length
+        block_size = 128
 
-    def mask_random_token(example):
-        tokens = example["input_ids"]
-        random_index = np.random.randint(0,len(tokens))
-        tokens[random_index] = mask_token
-        example["input_ids"] = tokens
-        return example
+        def group_texts(examples):
+            # Concatenate all texts.
+            concatenated_examples = {k: sum(examples[k], []) for k in examples.keys()}
+            total_length = len(concatenated_examples[list(examples.keys())[0]])
+            # We drop the small remainder, we could add padding if the model supported it instead of this drop, you can
+            # customize this part to your needs.
+            total_length = (total_length // block_size) * block_size
+            # Split by chunks of max_len.
+            result = {
+                k: [t[i: i + block_size] for i in range(0, total_length, block_size)]
+                for k, t in concatenated_examples.items()
+            }
+            result["labels"] = result["input_ids"].copy()
+            return result
 
-    # Then mask one of the input data tokens
-    data_tokenized = data_tokenized.map(
-        mask_random_token
-    )
+        data_tokenized = data_tokenized.map(
+            group_texts,
+            batched=True,
+            batch_size=1000,
+            num_proc=4,
+        )
 
-    return [tokenizer.decode(x["input_ids"]) for x in data_tokenized]
+        labels = []
+        def mask_random_token(example):
+            tokens = example["input_ids"]
+            random_index = np.random.randint(0, len(tokens))
+            # Add unmasked lable
+            tokens[random_index] = mask_token
+            # Adding the correct decoded label of the masked token
+            labels.append(example["labels"][random_index])
+            example["input_ids"] = tokens
+            return example
+
+        # Then mask one of the input data tokens
+        data_tokenized = [mask_random_token(e) for e in data_tokenized]
+
+        dataset = [[data_tokenized[i]["input_ids"], labels[i]] for i in range(len(data_tokenized))]
+        write_csv(dataset_file_path,dataset, ["masked_input", "true_label"])
+
+        data_tokenized = [tokenizer.decode(x["input_ids"]) for x in data_tokenized]
+        return data_tokenized
 
 
 class ListDataset(Dataset):
@@ -415,3 +397,21 @@ class ListDataset(Dataset):
 
     def __getitem__(self, i):
         return self.original_list[i]
+
+
+def write_csv(output_file_name, content, header=None):
+    with open(output_file_name, mode='w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(header)
+        writer.writerows(content)
+
+
+def read_csv(file_name, header=None, column_index=0):
+    with open(file_name) as file:
+        csvReader = csv.reader(file)
+        if header is not None:
+            csvReader.__next__()  # Skip header
+        # Read content
+        content = [line[column_index] for line in csvReader]
+
+    return content
