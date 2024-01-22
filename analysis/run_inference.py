@@ -75,10 +75,11 @@ def map_data(data, model_data):
         case "INCModelForQuestionAnswering":
             data = create_squad_examples(data)
         case "INCModelForMaskedLM":
-            data = ListDataset(create_maskedlm_examples2(data, model_data["model_name"]))
+            data = ListDataset(create_maskedlm_examples(data, model_data["model_name"]))
+        case "INCModelForTokenClassification":
+            data = ListDataset(creat_tokenclass_examples(data, model_data['model_name']))
 
     print("Done.")
-
     return data
 
 
@@ -91,6 +92,8 @@ def get_prediction(out, category, convert_fn):
         case "INCModelForQuestionAnswering":
             res.append(out[0]["answer"] if isinstance(out, list) else out["answer"])
         case "INCModelForMaskedLM":
+            res.append(out[0]["token"])
+        case 'INCModelForTokenClassification':
             res.append(out[0]["token"])
     return res
 
