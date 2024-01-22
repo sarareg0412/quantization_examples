@@ -307,6 +307,7 @@ def creat_tokenclass_examples(data, model_name):
         return tokenizer.convert_tokens_to_string(example['tokens'])
 
     data_tokenized = [decode_data(ex) for ex in data]
+    #data_tokenized = data.map(tokenize_and_align_labels)
     return data_tokenized
 
 class ListDataset(Dataset):

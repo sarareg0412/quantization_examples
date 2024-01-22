@@ -8,7 +8,7 @@ from run_comparison import run_comparison
 from run_quantization import run_quantization
 
 DEBUG = False
-cat = "CausalLM"
+cat = "TokenClassification"
 model_id = 0
 
 
@@ -103,7 +103,7 @@ def compare_models():
     run_comparison(model_data)
 
 
-quantize_and_measure_consumption()
+#quantize_and_measure_consumption()
 #infer_and_measure_consumption(True)
 #infer_and_measure_consumption(False)
-#compare_models()
+compare_models()

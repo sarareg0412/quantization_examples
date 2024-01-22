@@ -84,17 +84,17 @@ def map_data(data, model_data):
 
 
 def get_prediction(out, category, convert_fn):
-    res = []
+    res = None
     match category:
         case "INCModelForSequenceClassification":
             res = out[0]['label'] if isinstance(out['label'], list) else out['label']
-            res.append(convert_fn(res))
+            res = (convert_fn(res))
         case "INCModelForQuestionAnswering":
-            res.append(out[0]["answer"] if isinstance(out, list) else out["answer"])
+            res = out[0]["answer"] if isinstance(out, list) else out["answer"]
         case "INCModelForMaskedLM":
-            res.append(out[0]["token"])
+            res = out[0]["token"]
         case 'INCModelForTokenClassification':
-            res.append(out[0]["token"])
+            res = [convert_fn[res['entity']] for res in out]
     return res
 
 

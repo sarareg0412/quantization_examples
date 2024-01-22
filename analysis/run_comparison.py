@@ -34,7 +34,6 @@ def run_comparison(model_data):
         q_predictions = reduce_to_1D_list(list(csv_reader))
 
     exact_match_score = exact_match.compute(predictions=q_predictions, references=nq_predictions)
-
     nq_predictions = get_predictions(model_data["category"], nq_predictions, references)
     q_predictions = get_predictions(model_data["category"], q_predictions, references)
     # Calculate accuracy using the loaded accuracy metric
@@ -82,5 +81,6 @@ def get_metric(category):
             metric = evaluate.load("accuracy")
         case "INCModelForQuestionAnswering":
             metric = evaluate.load("squad")
+
 
     return metric
