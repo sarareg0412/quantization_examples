@@ -77,14 +77,14 @@ def map_data(data, model_data):
         case "INCModelForMaskedLM":
             data = ListDataset(create_maskedlm_examples(data, model_data["model_name"]))
         case "INCModelForTokenClassification":
-            data = ListDataset(creat_tokenclass_examples(data, model_data['model_name']))
+            data = ListDataset(create_tokenclass_examples(data, model_data['model_name']))
 
     print("Done.")
     return data
 
 
 def get_prediction(out, category, convert_fn):
-    res = None
+    res = []
     match category:
         case "INCModelForSequenceClassification":
             res = out[0]['label'] if isinstance(out['label'], list) else out['label']
@@ -94,7 +94,7 @@ def get_prediction(out, category, convert_fn):
         case "INCModelForMaskedLM":
             res = out[0]["token"]
         case 'INCModelForTokenClassification':
-            res = [convert_fn[res['entity']] for res in out]
+            res.append([{'index':res['index'] - 1, 'ner_tag':convert_fn[res['entity']]} for res in out])
     return res
 
 

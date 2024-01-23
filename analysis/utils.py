@@ -279,36 +279,77 @@ def create_maskedlm_examples(data, model_name):
         data_tokenized = [tokenizer.decode(x["input_ids"]) for x in data_tokenized]
         return data_tokenized
 
-def creat_tokenclass_examples(data, model_name):
+
+# Token Classification
+def create_tokenclass_examples(data, model_name):
 
     tokenizer = get_processor_from_category("INCModelForTokenClassification", model_name)
+    def decode_data(example):
+        return tokenizer.convert_tokens_to_string(example['tokens'])
+
+    data_tokenized = [decode_data(ex) for ex in data]
+    return data_tokenized
+
+
+def preprocess_tokenized_data(data, model_name):
+
+    tokenizer = get_processor_from_category("INCModelForTokenClassification", model_name)
+
+    def decode_tokens(example):
+        example['word_ids'] = tokenizer(example["tokens"], is_split_into_words=True).word_ids()
+        return example
+
+    #data = data.map(decode_tokens)
+
+    def align_labels_with_tokens(labels, word_ids):
+        new_labels = []
+        current_word = None
+        for word_id in word_ids:
+            if word_id != current_word:
+                # Start of a new word!
+                current_word = word_id
+                label = -100 if word_id is None else labels[word_id]
+                new_labels.append(label)
+            elif word_id is None:
+                # Special token
+                new_labels.append(-100)
+            else:
+                # Same word as previous token
+                label = labels[word_id]
+                # If the label is B-XXX we change it to I-XXX
+                if label % 2 == 1:
+                    label += 1
+                new_labels.append(label)
+
+        return new_labels
+
     def tokenize_and_align_labels(examples):
         tokenized_inputs = tokenizer(examples["tokens"], truncation=True, is_split_into_words=True)
 
         labels = []
         for i, label in enumerate(examples[f"ner_tags"]):
-            word_ids = tokenized_inputs.word_ids(batch_index=i)  # Map tokens to their respective word.
+            word_ids = tokenized_inputs.word_ids()  # Map tokens to their respective word.
             previous_word_idx = None
             label_ids = []
             for word_idx in word_ids:  # Set the special tokens to -100.
                 if word_idx is None:
-                    print('label_ids.append(-100)')
+                    label_ids.append(-100)
                 elif word_idx != previous_word_idx:  # Only label the first token of a given word.
-                    label_ids.append(label[word_idx])
+                    label_ids.append(label)
                 else:
-                    print('label_ids.append(-100)')
+                    label_ids.append(-100)
                 previous_word_idx = word_idx
             labels.append(label_ids)
 
         tokenized_inputs["labels"] = labels
         return tokenized_inputs
 
-    def decode_data(example):
-        return tokenizer.convert_tokens_to_string(example['tokens'])
+    data = data.map(tokenize_and_align_labels)
 
-    data_tokenized = [decode_data(ex) for ex in data]
-    #data_tokenized = data.map(tokenize_and_align_labels)
-    return data_tokenized
+    new_labels = []
+
+
+    return new_labels
 
 class ListDataset(Dataset):
     def __init__(self, original_list):

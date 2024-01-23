@@ -90,9 +90,8 @@ def compare_models():
     # Load models from csv file
     top_N_models = get_models_line_from_csv("SequenceClassification")
     line = top_N_models[2]  # cardiffNLP
-    model_data = get_model_data_from_line(line)
     #for n_experiment in range(0, N_EXPERIMENTS + 1):
-    run_comparison(model_data)
+    run_comparison(line)
 
 
 quantize_and_measure_consumption()

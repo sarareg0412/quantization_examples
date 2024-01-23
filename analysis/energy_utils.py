@@ -107,5 +107,5 @@ def generate_metric_charts_csv(csv_file):
     plt.show()
 
 
-# generate_metric_charts("../../../../ENERGY_DATA/anakin/quant_energy_data", "anakin87_electra-italian-xxl-cased")
-# generate_metric_charts_csv("../../../../ENERGY_DATA/anakin/quant_energy_data/anakin87-electra-italian-xxl-cased-squad-it_quant_exp00.csv", )
+generate_metric_charts("../../../../ENERGY_DATA/anakin/quant_energy_data", "anakin87_electra-italian-xxl-cased")
+#generate_metric_charts_csv("../../../../ENERGY_DATA/anakin/quant_energy_data/anakin87-electra-italian-xxl-cased-squad-it_quant_exp00.csv", )
