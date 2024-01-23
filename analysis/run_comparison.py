@@ -12,7 +12,7 @@ def run_comparison(line):
     if model_data['category'] == 'INCModelForTokenClassification':
         subprocess.run([
             # "../energibridge", "-o", "{}".format(energy_output_file),
-            "python", "evaluate_token_classification.py", "{}".format(line)])
+            "python", "evaluate_HF.py", "{}".format(line), 'seqeval'])
     else:
         dataset_file_path = f"INCModelForMaskedLM/{format_name(model_data['model_name'])}/dataset.csv"
         if (os.path.isfile(dataset_file_path)):

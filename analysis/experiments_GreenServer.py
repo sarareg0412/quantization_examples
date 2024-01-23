@@ -102,7 +102,14 @@ def compare_models():
     run_comparison(line)
 
 
+def use_evaluate_hf():
+    # Load models from csv file
+    top_N_models = get_models_line_from_csv(cat)
+    line = top_N_models[model_id]  # cardiffNLP
+    subprocess.run(["python", "evaluate_HF.py", "{}".format(line), 'seqeval'])
+
 #quantize_and_measure_consumption()
 #infer_and_measure_consumption(True)
 #infer_and_measure_consumption(False)
-compare_models()
+#compare_models()
+use_evaluate_hf()
