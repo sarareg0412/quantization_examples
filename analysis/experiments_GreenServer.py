@@ -111,5 +111,5 @@ def use_evaluate_hf():
 #quantize_and_measure_consumption()
 #infer_and_measure_consumption(True)
 #infer_and_measure_consumption(False)
-#compare_models()
-use_evaluate_hf()
+compare_models()
+#use_evaluate_hf()

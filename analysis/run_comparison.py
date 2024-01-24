@@ -9,7 +9,7 @@ exact_match = evaluate.load("exact_match")
 
 def run_comparison(line):
     model_data = get_model_data_from_line(line)
-    if model_data['category'] == 'INCModelForTokenClassification':
+    if model_data['category'] == 'INCModelForToken':
         subprocess.run([
             # "../energibridge", "-o", "{}".format(energy_output_file),
             "python", "evaluate_HF.py", "{}".format(line), 'seqeval'])
@@ -46,6 +46,14 @@ def run_comparison(line):
 
         nq_predictions = get_predictions(model_data["category"], nq_predictions, references)
         q_predictions = get_predictions(model_data["category"], q_predictions, references)
+
+        if (model_data["category"] == 'INCModelForTokenClassification'):
+            level_lists(q_predictions, nq_predictions)
+            nq_predictions = reduce_to_1D_list(nq_predictions)
+            q_predictions = reduce_to_1D_list(q_predictions)
+            exact_match_score = exact_match.compute(predictions=q_predictions, references=nq_predictions)
+            print(f"Exact match score is : {exact_match_score}")
+            return
 
         if (model_data["category"] != 'INCModelForQuestionAnswering'):
             exact_match_score = exact_match.compute(predictions=q_predictions, references=nq_predictions)
@@ -88,14 +96,7 @@ def get_predictions(category, prediction, references=None):
         case 'INCModelForTokenClassification':
             # Turn the string into a real dictionary
             tokens_dict = [ast.literal_eval(pred) for pred in prediction]
-            new_pred = [np.zeros((len(ref)), dtype=int) for ref in references]
-            for i,pred in enumerate(new_pred):
-                for el in tokens_dict[i]:
-                    if el['index'] == 13:
-                        print('prob')
-
-                    pred[el['index']] = el['ner_tag']
-            prediction = new_pred
+            prediction = tokens_dict
 
     return prediction
 
@@ -109,6 +110,5 @@ def get_metric(category):
             metric = evaluate.load("squad")
         case "INCModelForTokenClassification":
             metric = evaluate.load("f1")
-
 
     return metric

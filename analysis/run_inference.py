@@ -26,7 +26,7 @@ def run_inference_from_line(quantized, line):
     processor = get_processor_from_category(model_data["category"], model_data["model_name"])
     output_file_name = (f"{model_data['category']}/{format_name(model_data['model_name'])}/"
                         f"{'' if quantized else 'N'}Q_output.csv")
-    pipe = pipeline(model_data["task"], model=model, tokenizer=processor)
+    pipe = pipeline(model_data["task"], model=model, tokenizer=processor, grouped_entities = True)
 
     print(f"PERFORMING INFERENCE on {'QUANTIZED ' if quantized else ' '}{model_data['model_name']} and "
           f"{model_data['dataset']}/{model_data['dataset_config_name']}")
@@ -94,7 +94,8 @@ def get_prediction(out, category, convert_fn):
         case "INCModelForMaskedLM":
             res = out[0]["token"]
         case 'INCModelForTokenClassification':
-            res.append([{'index':res['index'] - 1, 'ner_tag':convert_fn[res['entity']]} for res in out])
+            #res.append([{'index':res['index'] - 1, 'ner_tag':convert_fn[res['entity']]} for res in out])
+            res.append([res['entity_group'] for res in out])
     return res
 
 

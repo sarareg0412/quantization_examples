@@ -5,7 +5,7 @@ from evaluate import evaluator
 
 from utils import *
 
-
+from optimum.intel import INCModelForTokenClassification
 
 def compare_models_HF(line, metric):
     model_data = get_model_data_from_line(line)
@@ -13,10 +13,11 @@ def compare_models_HF(line, metric):
     data = (data.train_test_split(train_size=TEST_DATA_PERCENT, seed=SEED)["train"])
 
     task_evaluator = evaluator(model_data['task'])
-    q_model = AutoModelForTokenClassification.from_pretrained(get_quantized_model_path(model_data["category"], model_data["model_name"]))
+    q_model = INCModelForTokenClassification.from_pretrained(get_quantized_model_path(model_data["category"], model_data["model_name"]))
+    q_model.task = model_data['task']
     #q_model.task = model_data['task']
     nq_model = model_data['model_name']
-    models = [nq_model, q_model]
+    models = [ q_model]
     results = []
     for model in models:
         results.append(

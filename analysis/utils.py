@@ -348,8 +348,17 @@ def preprocess_tokenized_data(data, model_name):
 
     new_labels = []
 
-
     return new_labels
+
+
+def level_lists(l1,l2):
+    for i in range(len(l1)):
+        difference = len(l1[i]) - len(l2[i])
+        if difference < 0:
+            l1[i].extend(['0'] * abs(difference))
+        elif difference > 0:
+            l2[i].extend(['0'] * difference)
+
 
 class ListDataset(Dataset):
     def __init__(self, original_list):
