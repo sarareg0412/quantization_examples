@@ -8,8 +8,8 @@ from run_comparison import run_comparison
 from run_quantization import run_quantization
 
 DEBUG = False
-cat = "MultipleChoice"
-model_id = 0
+cat = "QuestionAnswering"
+model_id = 2
 
 
 def get_models_line_from_csv(category):
@@ -110,6 +110,6 @@ def use_evaluate_hf():
 
 #quantize_and_measure_consumption()
 #infer_and_measure_consumption(True)
-infer_and_measure_consumption(False)
-#compare_models()
+#infer_and_measure_consumption(False)
+compare_models()
 #use_evaluate_hf()
