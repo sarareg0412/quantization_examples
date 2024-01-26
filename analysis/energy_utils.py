@@ -16,8 +16,8 @@ def generate_metric_charts(path: str, model_name):
     if not os.path.isdir(path):
         print(f"Path {path} not found")
     else:
-        files = os.listdir(path)
-        sorted_files = sorted(files, key=lambda x: x.split('_')[2])
+        sorted_files = os.listdir(path)
+        sorted_files = sorted(sorted_files, key=lambda x: x.split('_')[2])
         for csv_file in sorted_files:
             if not csv_file.endswith(".csv"):
                 continue
@@ -53,38 +53,51 @@ def generate_metric_charts(path: str, model_name):
     # plt.show()
 
 
-def generate_violin_charts(path: str, model_name):
-    fig, ax = plt.subplots(figsize=[5, 3])
-
-    all_data = []
+def generate_violin_charts(path: str):
+    #fig, axes = plt.subplots(figsize=[5, 3])
+    plt.figure(figsize=(10,10))
     if not os.path.isdir(path):
         print(f"Path {path} not found")
     else:
-        files = os.listdir(path)
-        sorted_files = sorted(files, key=lambda x: x.split('_')[2])
-        for csv_file in sorted_files:
-            if not csv_file.endswith(".csv"):
-                continue
-            print(f"Reading csv file {csv_file}")
-            df = pd.read_csv(os.path.join(path, csv_file))
-            print("Done.")
-            key = "PACAKGE_ENERGY (W)"
-            if "CPU_ENERGY (J)" in df.columns:
-                key = "CPU_ENERGY (J)"
-            if "PACAKGE0_ENERGY (W)" in df.columns:
-                key = "PACAKGE0_ENERGY (W)"
-            if "SYSTEM_POWER (Watts)" in df.columns:
-                key = "SYSTEM_POWER (Watts)"
-            data = df[key].copy().to_list()
-            all_data.append(data[-1] - data[0]) # Here we get the total consumption of 1 experiment
+        # Path is of the form 'INCModelFor.../model-name-formatted'
+        model_name = path.split('/')[-1]
+        data_quant = get_data_from_path(os.path.join(path, 'quant_energy_data'))
+        data_inf_Q = get_data_from_path(os.path.join(path, 'inf_energy_data/quant'))
+        # Sum the quantization energy consumption to the inference of the quantized model
+        tot_quant_data = [sum(x) for x in zip(data_quant, data_inf_Q)]
+        data_inf_NQ = get_data_from_path(os.path.join(path, 'inf_energy_data/non_quant'))
 
-        plot = sns.violinplot(y=all_data)
-        title = f"{model_name}_quant_energy_data_plot.pdf"
-        plot.set_title(title)
-        plot.get_figure().savefig(os.path.join(f"./plots/{title}"))
+        df = pd.DataFrame({'Quantized model': tot_quant_data, 'Non Quantized model':data_inf_NQ})
+
+        sns.violinplot(data= df, palette=['tab:blue', 'tab:orange'])
+        # Set labels and title
+        #plt.xlabel('Arrays')
+        plt.ylabel('Energy')
+        plt.ylim(0)
+        plt.title(f"Model {model_name} Energy Data Plot")
+        plt.savefig(os.path.join(f"./plots/{model_name}_energy_data_plot.png"))
     # plt.show()
 
+def get_data_from_path(path):
+    all_data = []
+    files = os.listdir(path)
+    sorted_files = sorted(files, key=lambda x: x.split('_')[-1])
+    for csv_file in sorted_files:
+        if not csv_file.endswith(".csv"):
+            continue
+        print(f"Reading csv file {csv_file}")
+        df = pd.read_csv(os.path.join(path, csv_file))
+        key = "PACAKGE_ENERGY (W)"
+        if "CPU_ENERGY (J)" in df.columns:
+            key = "CPU_ENERGY (J)"
+        if "PACAKGE0_ENERGY (W)" in df.columns:
+            key = "PACAKGE0_ENERGY (W)"
+        if "SYSTEM_POWER (Watts)" in df.columns:
+            key = "SYSTEM_POWER (Watts)"
+        data = df[key].copy().to_list()
+        all_data.append(data[-1] - data[0])  # Here we get the total consumption of 1 experiment
 
+    return all_data
 
 def avg_metric(df: pd.DataFrame, metric_name: str):
     all_data = None
@@ -140,5 +153,5 @@ def generate_metric_charts_csv(csv_file):
     plt.show()
 
 
-generate_violin_charts("../../../../ENERGY_DATA/anakin/inf_energy_data/quant", "anakin87_electra-italian-xxl-cased")
+generate_violin_charts("../../../../ENERGY_DATA/cardiff-latest")
 #generate_metric_charts_csv("../../../../ENERGY_DATA/anakin/quant_energy_data/anakin87-electra-italian-xxl-cased-squad-it_quant_exp00.csv", )

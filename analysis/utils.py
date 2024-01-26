@@ -351,6 +351,56 @@ def preprocess_tokenized_data(data, model_name):
     return new_labels
 
 
+# Multiple Choice
+def create_multichoice_examples(data, model_name):
+    tokenizer = get_processor_from_category('INCModelForMultipleChoice', model_name)
+
+    data_tokenized = []
+    for example in data:
+        question = example["question"]
+        context = example["article"]
+        options = example["options"]
+        label_example = example["answer"]
+        label_map = {label: i
+                     for i, label in enumerate(["A", "B", "C", "D"])}
+        choices_inputs = []
+
+        # Tokenize the answer + the possible answers
+        for ending_idx, (_, ending) in enumerate(zip(context, options)):
+            if question.find("_") != -1:
+                # fill in the banks questions
+                question_option = question.replace("_", ending)
+            else:
+                question_option = question + " " + ending
+            choices_inputs.append(tokenizer(
+                context,
+                question_option,
+                add_special_tokens=True,
+                #max_length=MAX_SEQ_LENGTH,
+                padding="max_length",
+                truncation=True,
+                return_overflowing_tokens=False,
+            ))
+        label = label_map[label_example]
+        input_ids = [x["input_ids"] for x in choices_inputs]
+        attention_mask = (
+            [x["attention_mask"] for x in choices_inputs]
+            # as the senteces follow the same structure,
+            # just one of them is necessary to check
+            if "attention_mask" in choices_inputs[0]
+            else None
+        )
+        example_encoded = {
+            #"example_id": example_id,
+            "input_ids": input_ids,
+            "attention_mask": attention_mask,
+            "labels": label,
+        }
+        data_tokenized.append(example_encoded)
+
+    return data_tokenized
+
+
 def level_lists(l1,l2):
     for i in range(len(l1)):
         difference = len(l1[i]) - len(l2[i])

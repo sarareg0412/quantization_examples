@@ -14,6 +14,8 @@ def run_inference_from_line(quantized, line):
     data = (load_dataset(model_data["dataset"], model_data["dataset_config_name"], split="test"))
     data = (data.train_test_split(train_size=TEST_DATA_PERCENT, seed=SEED)["train"])
             #.select(range(500)))  # Use 50% of test dataset to make inference
+    # map the dataset based on the category
+    data = map_data(data,model_data)
 
     quantized = True if (quantized == "True") else False
     model_path = get_quantized_model_path(model_data["category"], model_data["model_name"])
@@ -26,20 +28,25 @@ def run_inference_from_line(quantized, line):
     processor = get_processor_from_category(model_data["category"], model_data["model_name"])
     output_file_name = (f"{model_data['category']}/{format_name(model_data['model_name'])}/"
                         f"{'' if quantized else 'N'}Q_output.csv")
-    pipe = pipeline(model_data["task"], model=model, tokenizer=processor, grouped_entities = True)
 
     print(f"PERFORMING INFERENCE on {'QUANTIZED ' if quantized else ' '}{model_data['model_name']} and "
           f"{model_data['dataset']}/{model_data['dataset_config_name']}")
 
-    # map the dataset based on the category
-    data = map_data(data,model_data)
-
     with open(output_file_name, mode='w', newline='') as file:
         writer = csv.writer(file)
-        for out in t(pipe(data), total=len(data)):
-            # Since there might be multiple labels with multiple scores associated, we get the first one.
-            prediction = get_prediction(out,model_data["category"], model.config.label2id)
-            writer.writerow(prediction)
+        if(model_data["category"] == 'INCModelForMultipleChoice'):
+            for i in range(len(data)):
+                out = model(**data[i])
+                # Since there might be multiple labels with multiple scores associated, we get the first one.
+                prediction = get_prediction(out,model_data["category"], model.config.label2id)
+                writer.writerow(prediction)
+        else:
+            pipe = pipeline(model_data["task"], model=model, tokenizer=processor, grouped_entities=True)
+
+            for out in t(pipe(data), total=len(data)):
+                # Since there might be multiple labels with multiple scores associated, we get the first one.
+                prediction = get_prediction(out,model_data["category"], model.config.label2id)
+                writer.writerow(prediction)
         print("Done")
 
         """
@@ -78,6 +85,8 @@ def map_data(data, model_data):
             data = ListDataset(create_maskedlm_examples(data, model_data["model_name"]))
         case "INCModelForTokenClassification":
             data = ListDataset(create_tokenclass_examples(data, model_data['model_name']))
+        case "INCModelForMultipleChoice":
+            data = ListDataset(create_multichoice_examples(data, model_data['model_name']))
 
     print("Done.")
     return data
