@@ -33,8 +33,8 @@ def prepare_answering_input(
 tokenizer = AutoTokenizer.from_pretrained("LIAMF-USP/roberta-large-finetuned-race")
 #model = LongformerForMultipleChoice.from_pretrained("potsawee/longformer-large-4096-answering-race")
 #model = LongformerForMultipleChoice.from_pretrained("potsawee/longformer-large-4096-answering-race")
-#model = AutoModelForMultipleChoice.from_pretrained("LIAMF-USP/roberta-large-finetuned-race")
-model = INCModelForMultipleChoice.from_pretrained("INCModelForMultipleChoice/LIAMF-USP-roberta-large-finetuned-race/config")
+model = AutoModelForMultipleChoice.from_pretrained("LIAMF-USP/roberta-large-finetuned-race")
+#model = INCModelForMultipleChoice.from_pretrained("INCModelForMultipleChoice/LIAMF-USP-roberta-large-finetuned-race/config")
 
 context = r"""Chelsea's mini-revival continued with a third victory in a row as they consigned struggling Leicester City to a fifth consecutive defeat.
 Buoyed by their Champions League win over Borussia Dortmund, Chelsea started brightly and Ben Chilwell volleyed in from a tight angle against his old club.
@@ -60,8 +60,8 @@ options  = ['Ricardo Pereira', 'Ben Chilwell', 'Joao Felix', 'The Foxes']
 inputs = tokenizer([[context, options[0]], [context, options[1]],
                     [context, options[2]], [context, options[3]]
                     ], return_tensors="pt", padding=True)
-labels = torch.tensor(0).unsqueeze(0) # ???
-outputs = model(**{k: v.unsqueeze(0) for k, v in inputs.items()}, labels=labels)
+labels = torch.tensor(0).unsqueeze(0) # ??? apparently needed, not too sure
+outputs = model(**{k: v.unsqueeze(0) for k, v in inputs.items()}, labels = labels)
 
 logits = outputs.logits
 predicted_class = logits.argmax().item()

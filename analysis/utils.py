@@ -168,6 +168,7 @@ def get_dataset_from_name(ds_name, ds_config, percent):
     data = data.train_test_split(train_size=percent, seed=SEED)["train"]  # Use x% of test dataset
     return data
 
+
 # Question answering
 def create_squad_examples(dataset):
     squad_examples = []
@@ -260,6 +261,7 @@ def create_maskedlm_examples(data, model_name):
         )
 
         labels = []
+
         def mask_random_token(example):
             tokens = example["input_ids"]
             random_index = np.random.randint(0, len(tokens))
@@ -274,7 +276,7 @@ def create_maskedlm_examples(data, model_name):
         data_tokenized = [mask_random_token(e) for e in data_tokenized]
 
         dataset = [[data_tokenized[i]["input_ids"], labels[i]] for i in range(len(data_tokenized))]
-        write_csv(dataset_file_path,dataset, ["masked_input", "true_label"])
+        write_csv(dataset_file_path, dataset, ["masked_input", "true_label"])
 
         data_tokenized = [tokenizer.decode(x["input_ids"]) for x in data_tokenized]
         return data_tokenized
@@ -282,8 +284,8 @@ def create_maskedlm_examples(data, model_name):
 
 # Token Classification
 def create_tokenclass_examples(data, model_name):
-
     tokenizer = get_processor_from_category("INCModelForTokenClassification", model_name)
+
     def decode_data(example):
         return tokenizer.convert_tokens_to_string(example['tokens'])
 
@@ -292,14 +294,13 @@ def create_tokenclass_examples(data, model_name):
 
 
 def preprocess_tokenized_data(data, model_name):
-
     tokenizer = get_processor_from_category("INCModelForTokenClassification", model_name)
 
     def decode_tokens(example):
         example['word_ids'] = tokenizer(example["tokens"], is_split_into_words=True).word_ids()
         return example
 
-    #data = data.map(decode_tokens)
+    # data = data.map(decode_tokens)
 
     def align_labels_with_tokens(labels, word_ids):
         new_labels = []
@@ -352,56 +353,43 @@ def preprocess_tokenized_data(data, model_name):
 
 
 # Multiple Choice
-def create_multichoice_examples(data, model_name):
+def get_multichoice_output(data, model, model_name):
     tokenizer = get_processor_from_category('INCModelForMultipleChoice', model_name)
+    labels = torch.tensor(0).unsqueeze(0)
+    MAX_TOKEN_LENGTH = tokenizer.model_max_length-4
+    questionTokens = tokenizer.encode(data['question'], truncation=True, max_length=MAX_TOKEN_LENGTH)[1:-1]
+    contextTokens = tokenizer.encode(data['article'], truncation=True, max_length=MAX_TOKEN_LENGTH)[1:-1]
+    answers = data['options']
+    logits_sum = torch.zeros(1, len(answers))
 
-    data_tokenized = []
-    for example in data:
-        question = example["question"]
-        context = example["article"]
-        options = example["options"]
-        label_example = example["answer"]
-        label_map = {label: i
-                     for i, label in enumerate(["A", "B", "C", "D"])}
-        choices_inputs = []
+    maxAns = 0
+    for x in answers:
+        tokenLen = len(tokenizer.encode(x, truncation=True, max_length=MAX_TOKEN_LENGTH)) - 2
+        if tokenLen > maxAns:
+            maxAns = tokenLen
+    remainingTokens = len(contextTokens)
+    while remainingTokens > 0:
+        tokensToRemove = 0
+        totalMaxTokens = len(questionTokens) + len(contextTokens) + maxAns + 3
+        if totalMaxTokens > MAX_TOKEN_LENGTH:
+            tokensToRemove = totalMaxTokens - MAX_TOKEN_LENGTH
+            choppedContext = contextTokens[:-tokensToRemove]
+        else:
+            choppedContext = contextTokens
+        remainingTokens = remainingTokens - len(choppedContext)
+        contextTokens = contextTokens[-tokensToRemove:]
+        ANS = [[tokenizer.decode(choppedContext) + tokenizer.decode(questionTokens), candidate] for candidate in
+               answers]
+        inputs = tokenizer(ANS, return_tensors="pt", padding='max_length')
+        with torch.no_grad():
+            outputs = (model(**{k: v.unsqueeze(0) for k, v in inputs.items()}, labels=labels)).__dict__
+        logits_sum += outputs['logits']
 
-        # Tokenize the answer + the possible answers
-        for ending_idx, (_, ending) in enumerate(zip(context, options)):
-            if question.find("_") != -1:
-                # fill in the banks questions
-                question_option = question.replace("_", ending)
-            else:
-                question_option = question + " " + ending
-            choices_inputs.append(tokenizer(
-                context,
-                question_option,
-                add_special_tokens=True,
-                #max_length=MAX_SEQ_LENGTH,
-                padding="max_length",
-                truncation=True,
-                return_overflowing_tokens=False,
-            ))
-        label = label_map[label_example]
-        input_ids = [x["input_ids"] for x in choices_inputs]
-        attention_mask = (
-            [x["attention_mask"] for x in choices_inputs]
-            # as the senteces follow the same structure,
-            # just one of them is necessary to check
-            if "attention_mask" in choices_inputs[0]
-            else None
-        )
-        example_encoded = {
-            #"example_id": example_id,
-            "input_ids": input_ids,
-            "attention_mask": attention_mask,
-            "labels": label,
-        }
-        data_tokenized.append(example_encoded)
-
-    return data_tokenized
+    # Return the number associated with the class
+    return logits_sum.argmax().item()
 
 
-def level_lists(l1,l2):
+def level_lists(l1, l2):
     for i in range(len(l1)):
         difference = len(l1[i]) - len(l2[i])
         if difference < 0:
@@ -424,7 +412,8 @@ class ListDataset(Dataset):
 def write_csv(output_file_name, content, header=None):
     with open(output_file_name, mode='w', newline='') as file:
         writer = csv.writer(file)
-        writer.writerow(header)
+        if header is not None:
+            writer.writerow(header)
         writer.writerows(content)
 
 
@@ -437,3 +426,11 @@ def read_csv(file_name, header=None, column_index=0):
         content = [line[column_index] for line in csvReader]
 
     return content
+
+
+def convert_to_nums(path):
+    content = read_csv(path)
+    map_dict = {label: i for i, label in enumerate(["A", "B", "C", "D"])}
+    content_mapped = [[map_dict[x]] for x in content]
+    new_filename = os.path.splitext(path)[0] + '_copy.csv'
+    write_csv(new_filename,content_mapped)

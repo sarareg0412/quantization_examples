@@ -13,9 +13,9 @@ def run_inference_from_line(quantized, line):
     model_data = get_model_data_from_line(line)
     data = (load_dataset(model_data["dataset"], model_data["dataset_config_name"], split="test"))
     data = (data.train_test_split(train_size=TEST_DATA_PERCENT, seed=SEED)["train"])
-            #.select(range(500)))  # Use 50% of test dataset to make inference
+    # .select(range(500)))  # Use 50% of test dataset to make inference
     # map the dataset based on the category
-    data = map_data(data,model_data)
+    data = map_data(data, model_data)
 
     quantized = True if (quantized == "True") else False
     model_path = get_quantized_model_path(model_data["category"], model_data["model_name"])
@@ -34,44 +34,21 @@ def run_inference_from_line(quantized, line):
 
     with open(output_file_name, mode='w', newline='') as file:
         writer = csv.writer(file)
-        if(model_data["category"] == 'INCModelForMultipleChoice'):
-            for i in range(len(data)):
-                out = model(**data[i])
+        if model_data["category"] == 'INCModelForMultipleChoice':
+            for i in t(range(len(data))):
+                out = get_multichoice_output(data[i], model, model_data['model_name'])
                 # Since there might be multiple labels with multiple scores associated, we get the first one.
-                prediction = get_prediction(out,model_data["category"], model.config.label2id)
+                prediction = get_prediction(out, model_data["category"])
                 writer.writerow(prediction)
         else:
             pipe = pipeline(model_data["task"], model=model, tokenizer=processor, grouped_entities=True)
 
             for out in t(pipe(data), total=len(data)):
                 # Since there might be multiple labels with multiple scores associated, we get the first one.
-                prediction = get_prediction(out,model_data["category"], model.config.label2id)
+                prediction = get_prediction(out, model_data["category"], model.config.label2id)
                 writer.writerow(prediction)
         print("Done")
 
-        """
-        # Iterate through the validation set or any other split
-        for i, example in contrib.tenumerate(data):
-            # Load object and label truth label from the dataset
-            import pdb
-            pdb.set_trace()
-
-            object = example[data.column_names[1]]  # Assume the object column name is the first one
-            label = example[data.column_names[-1]]  # Assume the label column name is the last one
-
-            # Infer the object label using the model
-            prediction = pipe(object)
-            prediction = model(object)
-
-
-            # Since there might be multiple labels with multiple scores associated, we get the first one.
-            predicted_label = prediction[0]['label'] if isinstance(prediction, list) \
-                                                                   else prediction['label']
-
-            # Append ground truth label and predicted label for accuracy evaluation
-            references.append(label)
-            predictions.append(model.config.label2id[predicted_label])  # Map the predicted label using the model's label2id attribute
-        """
 
 def map_data(data, model_data):
     category = model_data["category"]
@@ -86,13 +63,13 @@ def map_data(data, model_data):
         case "INCModelForTokenClassification":
             data = ListDataset(create_tokenclass_examples(data, model_data['model_name']))
         case "INCModelForMultipleChoice":
-            data = ListDataset(create_multichoice_examples(data, model_data['model_name']))
+            data = ListDataset(data)
 
     print("Done.")
     return data
 
 
-def get_prediction(out, category, convert_fn):
+def get_prediction(out, category, convert_fn = None):
     res = []
     match category:
         case "INCModelForSequenceClassification":
@@ -102,9 +79,12 @@ def get_prediction(out, category, convert_fn):
             res = out[0]["answer"] if isinstance(out, list) else out["answer"]
         case "INCModelForMaskedLM":
             res = out[0]["token"]
-        case 'INCModelForTokenClassification':
-            #res.append([{'index':res['index'] - 1, 'ner_tag':convert_fn[res['entity']]} for res in out])
+        case "INCModelForTokenClassification":
             res.append([res['entity_group'] for res in out])
+        case "INCModelForMultipleChoice":
+            # No need to convert the output in a label (0:A, 1:B ecc) because HF accuracy gives
+            # error when letters instead of numbers are given
+            res = out
     return res
 
 

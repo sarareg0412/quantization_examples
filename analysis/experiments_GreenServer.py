@@ -8,8 +8,8 @@ from run_comparison import run_comparison
 from run_quantization import run_quantization
 
 DEBUG = False
-cat = "QuestionAnswering"
-model_id = 2
+cat = "MultipleChoice"
+model_id = 0
 
 
 def get_models_line_from_csv(category):

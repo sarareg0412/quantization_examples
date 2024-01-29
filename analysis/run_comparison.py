@@ -76,14 +76,19 @@ def get_references(category, data, model_name):
             references = data[label_column]
         case "INCModelForQuestionAnswering":
 
-            references = list(map(lambda example: {"id": example["id"],
-                                                   "answers": {"answer_start":example["answers"]["answer_start"],
-                                                               "text": [normalize_text(s) for s in example["answers"]["text"]]}},
+            references = list(map(lambda example:
+                                  {"id": example["id"],
+                                   "answers": {"answer_start": example["answers"]["answer_start"],
+                                               "text": [normalize_text(s) for s in example["answers"]["text"]]}},
                                   data))
         case "INCModelForMaskedLM":
-            references = data   # The token is already loaded
-        case 'INCModelForTokenClassification':
+            references = data  # The token is already loaded
+        case "INCModelForTokenClassification":
             references = preprocess_tokenized_data(data, model_name)
+        case "INCModelForMultipleChoice":
+            # accuracy needs double quotes
+            map_dict = {label: i  for i, label in enumerate(["A", "B", "C", "D"])}
+            references = [map_dict[x] for x in data['answer']]
 
     return references
 
@@ -92,7 +97,7 @@ def get_predictions(category, prediction, references=None):
     match category:
         case "INCModelForQuestionAnswering":
             prediction = [{"id": references[i]["id"], "prediction_text": normalize_text(example)} for
-                          i,example in enumerate(prediction)]
+                          i, example in enumerate(prediction)]
         case 'INCModelForTokenClassification':
             # Turn the string into a real dictionary
             tokens_dict = [ast.literal_eval(pred) for pred in prediction]
@@ -104,7 +109,7 @@ def get_predictions(category, prediction, references=None):
 def get_metric(category):
     metric = None
     match category:
-        case "INCModelForSequenceClassification"| "INCModelForMaskedLM":
+        case "INCModelForSequenceClassification" | "INCModelForMaskedLM" | "INCModelForMultipleChoice":
             metric = evaluate.load("accuracy")
         case "INCModelForQuestionAnswering":
             metric = evaluate.load("squad")
