@@ -41,8 +41,10 @@ def run_inference_from_line(quantized, line):
                 prediction = get_prediction(out, model_data["category"])
                 writer.writerow(prediction)
         else:
-            pipe = pipeline(model_data["task"], model=model, tokenizer=processor, grouped_entities=True)
-
+            if model_data["category"] == 'INCModelForTokenClassification':
+                pipe = pipeline(model_data["task"], model=model, tokenizer=processor, grouped_entities=True)
+            else:
+                pipe = pipeline(model_data["task"], model=model, tokenizer=processor)
             for out in t(pipe(data), total=len(data)):
                 # Since there might be multiple labels with multiple scores associated, we get the first one.
                 prediction = get_prediction(out, model_data["category"], model.config.label2id)
