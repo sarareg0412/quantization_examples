@@ -75,18 +75,19 @@ def get_prediction(out, category, convert_fn = None):
     res = []
     match category:
         case "INCModelForSequenceClassification":
-            res = out[0]['label'] if isinstance(out['label'], list) else out['label']
-            res = (convert_fn(res))
+            result = out[0]['label'] if isinstance(out['label'], list) else out['label']
+            res.append(convert_fn(result))
         case "INCModelForQuestionAnswering":
-            res = out[0]["answer"] if isinstance(out, list) else out["answer"]
+            result = out[0]["answer"] if isinstance(out, list) else out["answer"]
+            res.append(result)
         case "INCModelForMaskedLM":
-            res = out[0]["token"]
+            res.append(out[0]["token"])
         case "INCModelForTokenClassification":
             res.append([res['entity_group'] for res in out])
         case "INCModelForMultipleChoice":
             # No need to convert the output in a label (0:A, 1:B ecc) because HF accuracy gives
             # error when letters instead of numbers are given
-            res = out
+            res.append(out)
     return res
 
 
