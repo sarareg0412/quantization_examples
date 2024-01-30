@@ -1,13 +1,10 @@
 import csv
 import os
-import time
 
 from utils import csv_name, get_model_data_from_line, format_name, N_EXPERIMENTS
 import subprocess
 from run_comparison import run_comparison
-from run_quantization import run_quantization
 
-DEBUG = False
 cat = "MultipleChoice"
 model_id = 0
 
@@ -45,10 +42,10 @@ def quantize_and_measure_consumption():
                                                             f"0{n_experiment}" if n_experiment in range(0, 10)
                                                             else n_experiment)
         print("START QUANTIZATION FOR MODEL {} - EXP {}".format(model_data["model_name"], n_experiment))
-        if DEBUG:
+        if model_data['category'] == 'INCModelForCausalLM':
             subprocess.run([
                 # "../energibridge", "-o", "{}".format(energy_output_file),
-                "python", "run_quantization.py", "{}".format(save_model_dir),
+                "python", "run_quantization_CausalLM.py", "{}".format(save_model_dir),
                 "{}".format(line)
             ])
         else:
