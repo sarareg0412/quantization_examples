@@ -28,6 +28,7 @@ import numpy as np
 import torch
 from datasets import load_dataset
 from transformers import AutoTokenizer
+from accelerate import init_empty_weights
 
 N_CATEGORIES = 6
 # The dictionary has categories as keys and the list of tasks associated with them as values.

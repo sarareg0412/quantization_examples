@@ -5,7 +5,7 @@ from run_comparison import run_comparison
 from utils import *
 import subprocess
 
-cat = "QuestionAnswering"
+cat = "MaskedLM"
 
 def get_models_line_from_csv(category):
     filename = "./INC_models/INCModelFor{}_{}".format(category, csv_name)
@@ -24,66 +24,63 @@ def quantize_and_measure_consumption():
     top_N_models = get_models_line_from_csv(cat)
 
     # Quantize the N_MODELS models of each category:
-    for line in top_N_models[2:3]:
+    model_data = get_model_data_from_line(top_N_models[0])
+    model_name_formatted = format_name(model_data["model_name"])
 
-        model_data = get_model_data_from_line(line)
-        model_name_formatted = format_name(model_data["model_name"])
-
-        # The saving directory of the model weights will follow the naming convention like
-        # ./computer-vision/model_name_formatted/config
-        save_model_dir = "{}/{}/config".format(model_data["category"], model_name_formatted)
-        # The model's energy data files will be csv and in the directory following the naming convention like
-        # ./computer-vision/model_name_formatted/quant_energy_data
-        save_energy_file_dir = "{}/{}/quant_energy_data".format(model_data["category"], model_name_formatted)
-        # Preliminary creation of the needed directory to save the output file, or the energibridge command won't work
-        os.makedirs(save_energy_file_dir, exist_ok=True)
-        for n_experiment in range(0, N_EXPERIMENTS + 1):
-            time.sleep(5)  # Sleep for 5 seconds
-            # The output file will be named model-name-formatted_quant_exp0.csv
-            energy_output_file = "{}/{}_quant_exp{}.csv".format(save_energy_file_dir, model_name_formatted,
-                                                                f"0{n_experiment}" if n_experiment in range(0, 10)
-                                                                else n_experiment)
-            print("START QUANTIZATION FOR MODEL {} - EXP {}".format(model_data["model_name"], n_experiment))
-            subprocess.run([
-                "/home/tdurieux/git/EnergiBridge/target/release/energibridge", "-o", "{}".format(energy_output_file),
-                "optimum-cli", "inc", "quantize", "--model", "{}".format(model_data["model_name"]),
-                "--output", "{}".format(save_model_dir)
-                # "python", "run_quantization.py", "{}".format(save_model_dir),
-                #                                 "{}".format(line)
-            ])
-            print("END QUANTIZATION FOR MODEL {} - EXP {}".format(model_data["model_name"], n_experiment))
+    # The saving directory of the model weights will follow the naming convention like
+    # ./computer-vision/model_name_formatted/config
+    save_model_dir = "{}/{}/config".format(model_data["category"], model_name_formatted)
+    # The model's energy data files will be csv and in the directory following the naming convention like
+    # ./computer-vision/model_name_formatted/quant_energy_data
+    save_energy_file_dir = "{}/{}/quant_energy_data".format(model_data["category"], model_name_formatted)
+    # Preliminary creation of the needed directory to save the output file, or the energibridge command won't work
+    os.makedirs(save_energy_file_dir, exist_ok=True)
+    for n_experiment in range(0, N_EXPERIMENTS + 1):
+        time.sleep(5)  # Sleep for 5 seconds
+        # The output file will be named model-name-formatted_quant_exp0.csv
+        energy_output_file = "{}/{}_quant_exp{}.csv".format(save_energy_file_dir, model_name_formatted,
+                                                            f"0{n_experiment}" if n_experiment in range(0, 10)
+                                                            else n_experiment)
+        print("START QUANTIZATION FOR MODEL {} - EXP {}".format(model_data["model_name"], n_experiment))
+        subprocess.run([
+            "/home/tdurieux/git/EnergiBridge/target/release/energibridge", "-o", "{}".format(energy_output_file),
+            "optimum-cli", "inc", "quantize", "--model", "{}".format(model_data["model_name"]),
+            "--output", "{}".format(save_model_dir)
+            # "python", "run_quantization.py", "{}".format(save_model_dir),
+            #                                 "{}".format(line)
+        ])
+        print("END QUANTIZATION FOR MODEL {} - EXP {}".format(model_data["model_name"], n_experiment))
 
 
 def infer_and_measure_consumption(quantized):
     # Load models from csv file
     top_N_models = get_models_line_from_csv(cat)
     # Evaluate the N_MODELS models of each category:
-    for line in top_N_models[2:3]:
-
-        model_data = get_model_data_from_line(line)
-        model_name_formatted = format_name(model_data["model_name"])
-        # The model's energy data files will be csv and in the directory following the naming convention like
-        # ./computer-vision/model_name_formatted/inf_energy_data/quant or non_quant based on the quantized parameter
-        save_energy_file_dir = "{}/{}/inf_energy_data/{}".format(model_data["category"],
-                                                                 model_name_formatted,
-                                                                 "quant" if quantized else "non_quant")
-        # Preliminary creation of the needed directory to save the output file, or the energibridge command won't work
-        os.makedirs(save_energy_file_dir, exist_ok=True)
-        for n_experiment in range(0, N_EXPERIMENTS + 1):
-            time.sleep(5)  # Sleep for 5 seconds
-            # The output file will be named model-name-formatted_Q_inf_exp0.csv
-            energy_output_file = "{}/{}_{}inf_exp{}.csv".format(save_energy_file_dir,
-                                                                model_name_formatted,
-                                                                "Q_" if quantized else "",
-                                                                f"0{n_experiment}" if n_experiment in range(0, 10)
-                                                                else n_experiment)
-            print("START EVALUATION FOR {}MODEL {} - EXP {}".format("QUANTIZED " if quantized else "",
-                                                                    model_data["model_name"], n_experiment))
-            subprocess.run(["/home/tdurieux/git/EnergiBridge/target/release/energibridge", "-o", "{}".format(energy_output_file),
-                            "python", "run_inference.py", "{}".format(str(quantized)),
-                            "{}".format(line)])
-            print("END EVALUATION FOR {}MODEL {} - EXP {}".format("QUANTIZED " if quantized else "",
-                                                                  model_data["model_name"], n_experiment))
+    line = top_N_models[0]
+    model_data = get_model_data_from_line(line)
+    model_name_formatted = format_name(model_data["model_name"])
+    # The model's energy data files will be csv and in the directory following the naming convention like
+    # ./computer-vision/model_name_formatted/inf_energy_data/quant or non_quant based on the quantized parameter
+    save_energy_file_dir = "{}/{}/inf_energy_data/{}".format(model_data["category"],
+                                                             model_name_formatted,
+                                                             "quant" if quantized else "non_quant")
+    # Preliminary creation of the needed directory to save the output file, or the energibridge command won't work
+    os.makedirs(save_energy_file_dir, exist_ok=True)
+    for n_experiment in range(0, N_EXPERIMENTS + 1):
+        time.sleep(5)  # Sleep for 5 seconds
+        # The output file will be named model-name-formatted_Q_inf_exp0.csv
+        energy_output_file = "{}/{}_{}inf_exp{}.csv".format(save_energy_file_dir,
+                                                            model_name_formatted,
+                                                            "Q_" if quantized else "",
+                                                            f"0{n_experiment}" if n_experiment in range(0, 10)
+                                                            else n_experiment)
+        print("START EVALUATION FOR {}MODEL {} - EXP {}".format("QUANTIZED " if quantized else "",
+                                                                model_data["model_name"], n_experiment))
+        subprocess.run(["/home/tdurieux/git/EnergiBridge/target/release/energibridge", "-o", "{}".format(energy_output_file),
+                        "python", "run_inference.py", "{}".format(str(quantized)),
+                        "{}".format(line)])
+        print("END EVALUATION FOR {}MODEL {} - EXP {}".format("QUANTIZED " if quantized else "",
+                                                              model_data["model_name"], n_experiment))
 
 
 def compare_models():
