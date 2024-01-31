@@ -1,4 +1,3 @@
-import csv
 from utils import *
 from huggingface_hub import HfApi, ModelFilter, DatasetFilter  # api to interact with the hub
 
@@ -164,5 +163,4 @@ def create_INC_csv():
         print("Done.")
 
 
-#create_categories_csv()
 create_INC_csv()

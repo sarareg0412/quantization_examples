@@ -1,11 +1,11 @@
-import csv
 import time
 
 from run_comparison import run_comparison
 from utils import *
 import subprocess
 
-cat = "MaskedLM"
+categories = ["TokenClassification", "MultipleChoice"]
+
 
 def get_models_line_from_csv(category):
     filename = "./INC_models/INCModelFor{}_{}".format(category, csv_name)
@@ -91,7 +91,8 @@ def compare_models():
     run_comparison(line)
 
 
-quantize_and_measure_consumption()
-infer_and_measure_consumption(True)
-infer_and_measure_consumption(False)
+for cat in categories:
+    quantize_and_measure_consumption()
+    infer_and_measure_consumption(True)
+    infer_and_measure_consumption(False)
 

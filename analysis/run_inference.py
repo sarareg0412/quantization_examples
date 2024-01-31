@@ -13,7 +13,6 @@ def run_inference_from_line(quantized, line):
     model_data = get_model_data_from_line(line)
     data = (load_dataset(model_data["dataset"], model_data["dataset_config_name"], split="test"))
     data = (data.train_test_split(train_size=TEST_DATA_PERCENT, seed=SEED)["train"])
-    # .select(range(500)))  # Use 50% of test dataset to make inference
     # map the dataset based on the category
     data = map_data(data, model_data)
 

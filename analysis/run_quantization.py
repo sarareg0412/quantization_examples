@@ -1,10 +1,8 @@
 from evaluate import load, evaluator
 from neural_compressor.config import AccuracyCriterion, PostTrainingQuantConfig, TuningCriterion
-from optimum.intel.neural_compressor import INCQuantizer, INCModelForQuestionAnswering
-from transformers import AutoModelForImageClassification, pipeline
+from optimum.intel.neural_compressor import INCQuantizer
+from transformers import AutoModelForSequenceClassification, pipeline
 from utils import *
-from optimum.onnxruntime import ORTQuantizer, ORTModel
-from optimum.onnxruntime.configuration import AutoQuantizationConfig
 import sys
 
 dataset = None
