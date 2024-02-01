@@ -55,7 +55,7 @@ def generate_metric_charts(path: str, model_name):
 
 def generate_violin_charts(path: str):
     #fig, axes = plt.subplots(figsize=[5, 3])
-    plt.figure(figsize=(10,10))
+    plt.figure(figsize=(7,10))
     if not os.path.isdir(path):
         print(f"Path {path} not found")
     else:
@@ -69,9 +69,15 @@ def generate_violin_charts(path: str):
 
         df = pd.DataFrame({'Quantized model': tot_quant_data, 'Non Quantized model':data_inf_NQ})
 
-        sns.violinplot(data= df, palette=['tab:blue', 'tab:orange'])
+        sns.violinplot(data= df, palette=['tab:blue', 'tab:orange'],  density_norm='width')
+        avg_NQ = (sum(data_inf_NQ) / len(data_inf_Q))
+        avg_Q = (sum(tot_quant_data) / len(tot_quant_data))
+        plt.text(0.75, avg_NQ/4, f'Average energy Q = {avg_Q:.3f} J'
+                                      f'\nAverage energy NQ = {avg_NQ:.3f} J\n'
+                                      f'Amount of energy saved: {(1-(avg_Q/avg_NQ))*100:.2f}%',
+                    fontsize=12, ha='center', va='center',
+                     bbox=dict(facecolor='white', alpha=0.5))
         # Set labels and title
-        #plt.xlabel('Arrays')
         plt.ylabel('Energy')
         plt.ylim(0)
         plt.title(f"Model {model_name} Energy Data Plot")
@@ -82,7 +88,7 @@ def get_data_from_path(path):
     all_data = []
     files = os.listdir(path)
     sorted_files = sorted(files, key=lambda x: x.split('_')[-1])
-    for csv_file in sorted_files:
+    for csv_file in sorted_files[1:21]:   # skip the first experiment
         if not csv_file.endswith(".csv"):
             continue
         print(f"Reading csv file {csv_file}")
@@ -153,5 +159,5 @@ def generate_metric_charts_csv(csv_file):
     plt.show()
 
 
-generate_violin_charts("../../../../ENERGY_DATA/cardiff-latest")
+generate_violin_charts("../../../../ENERGY_DATA/sequence_classification")
 #generate_metric_charts_csv("../../../../ENERGY_DATA/anakin/quant_energy_data/anakin87-electra-italian-xxl-cased-squad-it_quant_exp00.csv", )

@@ -5,7 +5,7 @@ from utils import csv_name, get_model_data_from_line, format_name, N_EXPERIMENTS
 import subprocess
 from run_comparison import run_comparison
 
-cat = "MultipleChoice"
+cat = "SequenceClassification"
 model_id = 0
 
 
@@ -99,7 +99,7 @@ def use_evaluate_hf():
     subprocess.run(["python", "evaluate_HF.py", "{}".format(line), 'seqeval'])
 
 #quantize_and_measure_consumption()
-#infer_and_measure_consumption(True)
-#infer_and_measure_consumption(False)
+infer_and_measure_consumption(True)
+infer_and_measure_consumption(False)
 compare_models()
 #use_evaluate_hf()

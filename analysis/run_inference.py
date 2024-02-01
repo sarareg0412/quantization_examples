@@ -12,7 +12,8 @@ from datasets import load_dataset
 def run_inference_from_line(quantized, line):
     model_data = get_model_data_from_line(line)
     data = (load_dataset(model_data["dataset"], model_data["dataset_config_name"], split="test"))
-    data = (data.train_test_split(train_size=TEST_DATA_PERCENT, seed=SEED)["train"])
+    data = (data.train_test_split(train_size=TEST_DATA_PERCENT, seed=SEED)["train"].select(range(300)))  # Use 50% of test dataset to make inference
+
     # map the dataset based on the category
     data = map_data(data, model_data)
 
@@ -75,7 +76,7 @@ def get_prediction(out, category, convert_fn = None):
     match category:
         case "INCModelForSequenceClassification":
             result = out[0]['label'] if isinstance(out['label'], list) else out['label']
-            res.append(convert_fn(result))
+            res.append(convert_fn[result])
         case "INCModelForQuestionAnswering":
             result = out[0]["answer"] if isinstance(out, list) else out["answer"]
             res.append(result)
