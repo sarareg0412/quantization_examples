@@ -21,8 +21,8 @@ def run_comparison(line, train_size=TEST_DATA_PERCENT, seed = SEED):
             data = read_csv(dataset_file_path, ["masked_input", "true_label"], 1)
         else:
             print(f"Loading dataset from hub")
-            data = (load_dataset(model_data["dataset"], model_data["dataset_config_name"], split="test"))
-            data = (data.train_test_split(train_size=train_size, seed=seed)["train"])
+            data = get_split_dataset(model_data, train_size=train_size, seed=seed)
+
         # Initialize lists to store references and predictions for accuracy evaluation
         references = get_references(model_data["category"], data, model_data['model_name'])
 

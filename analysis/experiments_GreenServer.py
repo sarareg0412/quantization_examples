@@ -106,9 +106,20 @@ def run_experiments_and_create_csv():
     line = top_N_models[model_id]
     run_experiments(line)
 
+
+def run_optimization():
+    # Load models from csv file
+    top_N_models = get_models_line_from_csv(cat)
+    line = top_N_models[model_id]  # cardiffNLP
+    model_data = get_model_data_from_line(line)
+    save_model_dir = "{}/{}/opt_quant/config".format(model_data["category"], format_name(model_data['model_name']))
+    print("START QUANTIZATION OPTIMIZATION FOR MODEL {}".format(model_data["model_name"]))
+    subprocess.run(["python", "run_optimization.py", "{}".format(line), "{}".format(save_model_dir)])
+
 #quantize_and_measure_consumption()
 #infer_and_measure_consumption(True)
 #infer_and_measure_consumption(False)
 #compare_models()
 #use_evaluate_hf()
-run_experiments_and_create_csv()
+#run_experiments_and_create_csv()
+run_optimization()

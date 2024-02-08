@@ -434,3 +434,8 @@ def convert_to_nums(path):
     content_mapped = [[map_dict[x]] for x in content]
     new_filename = os.path.splitext(path)[0] + '_copy.csv'
     write_csv(new_filename,content_mapped)
+
+
+def get_split_dataset(model_data, train_size, seed, split= 'train'):
+    data = (load_dataset(model_data["dataset"], model_data["dataset_config_name"], split="test"))
+    return data.train_test_split(train_size=train_size, seed=seed)[split]

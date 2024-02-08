@@ -25,9 +25,9 @@ def run_experiments(line):
 
     for seed in seeds:
         # Run inference for both models
-        #run_inference_from_line('True', line, train_size, seed)
-        #run_inference_from_line('False', line, train_size, seed)
-        # Evaluate the models and add the results to the a csv file
+        run_inference_from_line('True', line, train_size, seed)
+        run_inference_from_line('False', line, train_size, seed)
+        # Evaluate the models and add the results to a csv file
         result_dict = run_comparison(line, train_size, seed)
         content = format_result_dict(model_data,result_dict, seed)
         write_csv(file_name, content=content, mode='a')

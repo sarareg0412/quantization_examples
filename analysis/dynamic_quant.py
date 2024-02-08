@@ -46,7 +46,7 @@ def quantize_and_measure_consumption():
             "/home/tdurieux/git/EnergiBridge/target/release/energibridge", "-o", "{}".format(energy_output_file),
             "optimum-cli", "inc", "quantize", "--model", "{}".format(model_data["model_name"]),
             "--output", "{}".format(save_model_dir)
-            # "python", "run_quantization.py", "{}".format(save_model_dir),
+            # "python", "run_optimization.py", "{}".format(save_model_dir),
             #                                 "{}".format(line)
         ])
         print("END QUANTIZATION FOR MODEL {} - EXP {}".format(model_data["model_name"], n_experiment))

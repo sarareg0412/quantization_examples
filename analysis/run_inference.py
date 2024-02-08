@@ -11,8 +11,7 @@ from datasets import load_dataset
 
 def run_inference_from_line(is_quantized, line, train_size=TEST_DATA_PERCENT, seed=SEED):
     model_data = get_model_data_from_line(line)
-    data = (load_dataset(model_data["dataset"], model_data["dataset_config_name"], split="test"))
-    data = (data.train_test_split(train_size=train_size, seed=seed)["train"])
+    data = get_split_dataset(model_data, train_size=train_size, seed=seed)
 
     # map the dataset based on the category
     data = map_data(data, model_data)
