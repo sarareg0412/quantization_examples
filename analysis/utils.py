@@ -28,7 +28,6 @@ import numpy as np
 import torch
 from datasets import load_dataset
 from transformers import AutoTokenizer
-from accelerate import init_empty_weights
 
 N_CATEGORIES = 6
 # The dictionary has categories as keys and the list of tasks associated with them as values.
@@ -69,7 +68,7 @@ SIMPLE_FILTER = False
 N_EXPERIMENTS = 0
 SEED = 42
 QUANT_SPLIT_PERCENT = 0.2  # Quantization split percentage
-TEST_DATA_PERCENT = 0.5
+TEST_DATA_PERCENT = 0.05
 
 
 def print_size_of_model(model):
@@ -410,8 +409,8 @@ class ListDataset(Dataset):
         return self.original_list[i]
 
 
-def write_csv(output_file_name, content, header=None):
-    with open(output_file_name, mode='w', newline='') as file:
+def write_csv(output_file_name, content, header=None, mode='w'):
+    with open(output_file_name, mode=mode, newline='') as file:
         writer = csv.writer(file)
         if header is not None:
             writer.writerow(header)

@@ -9,15 +9,15 @@ from transformers import pipeline
 from datasets import load_dataset
 
 
-def run_inference_from_line(quantized, line):
+def run_inference_from_line(is_quantized, line, train_size=TEST_DATA_PERCENT, seed=SEED):
     model_data = get_model_data_from_line(line)
     data = (load_dataset(model_data["dataset"], model_data["dataset_config_name"], split="test"))
-    data = (data.train_test_split(train_size=TEST_DATA_PERCENT, seed=SEED)["train"].select(range(300)))  # Use 50% of test dataset to make inference
+    data = (data.train_test_split(train_size=train_size, seed=seed)["train"])
 
     # map the dataset based on the category
     data = map_data(data, model_data)
 
-    quantized = True if (quantized == "True") else False
+    quantized = True if (is_quantized == "True") else False
     model_path = get_quantized_model_path(model_data["category"], model_data["model_name"])
     # If we want to evaluate the NOT quantized model, we can just use the
     # HF model name as parameter to pass to the task_evaluator
@@ -59,7 +59,7 @@ def map_data(data, model_data):
         case "INCModelForSequenceClassification":
             data = KeyDataset(data, "text")
         case "INCModelForQuestionAnswering":
-            data = create_squad_examples(data)
+            data = ListDataset(create_squad_examples(data))
         case "INCModelForMaskedLM":
             data = ListDataset(create_maskedlm_examples(data, model_data["model_name"]))
         case "INCModelForTokenClassification":
@@ -71,7 +71,7 @@ def map_data(data, model_data):
     return data
 
 
-def get_prediction(out, category, convert_fn = None):
+def get_prediction(out, category, convert_fn=None):
     res = []
     match category:
         case "INCModelForSequenceClassification":

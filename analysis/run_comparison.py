@@ -1,4 +1,5 @@
 import csv
+import itertools
 import subprocess
 
 import evaluate
@@ -7,7 +8,7 @@ from utils import *
 exact_match = evaluate.load("exact_match")
 
 
-def run_comparison(line):
+def run_comparison(line, train_size=TEST_DATA_PERCENT, seed = SEED):
     model_data = get_model_data_from_line(line)
     if model_data['category'] == 'INCModelForToken':
         subprocess.run([
@@ -21,7 +22,7 @@ def run_comparison(line):
         else:
             print(f"Loading dataset from hub")
             data = (load_dataset(model_data["dataset"], model_data["dataset_config_name"], split="test"))
-            data = (data.train_test_split(train_size=TEST_DATA_PERCENT, seed=SEED)["train"]).select(range(300))
+            data = (data.train_test_split(train_size=train_size, seed=seed)["train"])
         # Initialize lists to store references and predictions for accuracy evaluation
         references = get_references(model_data["category"], data, model_data['model_name'])
 
@@ -53,7 +54,7 @@ def run_comparison(line):
             q_predictions = reduce_to_1D_list(q_predictions)
             exact_match_score = exact_match.compute(predictions=q_predictions, references=nq_predictions)
             print(f"Exact match score is : {exact_match_score}")
-            return
+            return exact_match_score
 
         if (model_data["category"] != 'INCModelForQuestionAnswering'):
             exact_match_score = exact_match.compute(predictions=q_predictions, references=nq_predictions)
@@ -66,7 +67,7 @@ def run_comparison(line):
         print(f"NQ model metric score is : {NQ_metric}")
         print(f"Q model metric score is : {Q_metric}")
         print(f"Exact match score is : {exact_match_score}")
-
+        return get_final_dict(NQ_metric, Q_metric, exact_match_score)
 
 def get_references(category, data, model_name):
     references = []
@@ -117,3 +118,21 @@ def get_metric(category):
             metric = evaluate.load("f1")
 
     return metric
+
+
+def get_final_dict(NQ_metric, Q_metric, exact_match):
+    results = exact_match
+    results = add_new_value('NQ','accuracy', NQ_metric, results)
+    results = add_new_value('NQ','f1', NQ_metric, results)
+    results = add_new_value('Q','accuracy', Q_metric, results)
+    results = add_new_value('Q','f1', Q_metric, results)
+
+    return results
+
+
+def add_new_value(prefix, metric, old_dict, new_dict):
+    for key in old_dict.keys():
+        # Check if the key starts with the specified prefix
+        if key.startswith(metric):
+            new_dict[f'{prefix}_{metric}'] = old_dict[key]
+    return new_dict

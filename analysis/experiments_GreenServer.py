@@ -4,9 +4,10 @@ import os
 from utils import csv_name, get_model_data_from_line, format_name, N_EXPERIMENTS
 import subprocess
 from run_comparison import run_comparison
+from run_experiments import run_experiments
 
 cat = "SequenceClassification"
-model_id = 0
+model_id = 1
 
 
 def get_models_line_from_csv(category):
@@ -87,7 +88,7 @@ def infer_and_measure_consumption(quantized):
 def compare_models():
     # Load models from csv file
     top_N_models = get_models_line_from_csv(cat)
-    line = top_N_models[model_id]  # cardiffNLP
+    line = top_N_models[model_id]
     # for n_experiment in range(0, N_EXPERIMENTS + 1):
     run_comparison(line)
 
@@ -98,8 +99,16 @@ def use_evaluate_hf():
     line = top_N_models[model_id]  # cardiffNLP
     subprocess.run(["python", "evaluate_HF.py", "{}".format(line), 'seqeval'])
 
+
+def run_experiments_and_create_csv():
+    # Load models from csv file
+    top_N_models = get_models_line_from_csv(cat)
+    line = top_N_models[model_id]
+    run_experiments(line)
+
 #quantize_and_measure_consumption()
-infer_and_measure_consumption(True)
-infer_and_measure_consumption(False)
-compare_models()
+#infer_and_measure_consumption(True)
+#infer_and_measure_consumption(False)
+#compare_models()
 #use_evaluate_hf()
+run_experiments_and_create_csv()
