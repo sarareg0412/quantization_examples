@@ -443,7 +443,7 @@ def get_split_dataset(model_data, train_size, seed, split= 'train'):
     return data.train_test_split(train_size=train_size, seed=seed)[split]
 
 
-def get_metric_from_catecory(category):
+def get_metric_from_category(category):
     metric = None
     match category:
         case "INCModelForSequenceClassification" | "INCModelForMaskedLM" | "INCModelForMultipleChoice":

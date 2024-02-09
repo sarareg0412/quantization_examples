@@ -60,7 +60,7 @@ def run_comparison(line, train_size=TEST_DATA_PERCENT, seed = SEED):
             exact_match_score = exact_match.compute(predictions=q_predictions, references=nq_predictions)
 
         # Calculate performance using the loaded metric
-        metric = get_metric_from_catecory(model_data["category"])
+        metric = get_metric_from_category(model_data["category"])
         NQ_metric = metric.compute(predictions=nq_predictions, references=references)
         Q_metric = metric.compute(predictions=q_predictions, references=references)
 

@@ -34,7 +34,7 @@ def eval_func(model_eval):
     args = {
         "model_or_pipeline": pipe,
         "data": dataset,
-        "metric": get_metric_from_catecory(model_data['category'])
+        "metric": get_metric_from_category(model_data['category'])
     }
 
     if model_data['category'] == 'INCModelForSequenceClassification':
