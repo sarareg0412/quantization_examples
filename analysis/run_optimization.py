@@ -20,16 +20,30 @@ quantization_config = PostTrainingQuantConfig(
 )
 
 
-def eval_func(model):
-    pipe.model = model
-    # SequenceClassification is actually "text-classification"
+def eval_func(model_eval):
+    pipe.model = model_eval
+    """
+        Currently accepted tasks are:
+        - `"image-classification"`
+        - `"question-answering"`
+        - `"text-classification"`
+        - `"token-classification"`
+    """
     task_evaluator = evaluator(model_data['task'])
+    args = {
+        "model_or_pipeline": pipe,
+        "data": dataset,
+        "metric": get_metric_from_catecory(model_data['category'])
+    }
+
+    if model_data['category'] == 'INCModelForSequenceClassification':
+        args["label_mapping"]=model_eval.config.label2id
+
     results = task_evaluator.compute(
-        model_or_pipeline=pipe,
-        data=dataset,
-        metric=load("accuracy")
+        **args
     )
-    return results["accuracy"]
+
+    return list(results.values())[0]
 
 
 def run_optimization(save_dir):

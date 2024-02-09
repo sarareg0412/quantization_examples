@@ -26,7 +26,7 @@ quantization_config = PostTrainingQuantConfig(
 def eval_func(model):
     pipe.model = model
     # SequenceClassification is actually "text-classification"
-    task_evaluator = evaluator('text-classification')
+    task_evaluator = evaluator(model.config.task)
     results = task_evaluator.compute(
         model_or_pipeline=pipe,
         #tokenizer=processor,
