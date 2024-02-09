@@ -4,6 +4,8 @@ from functools import reduce
 import random
 
 import os
+
+import evaluate
 from optimum.intel import (
     INCModelForSequenceClassification,
     INCModelForQuestionAnswering,
@@ -439,3 +441,16 @@ def convert_to_nums(path):
 def get_split_dataset(model_data, train_size, seed, split= 'train'):
     data = (load_dataset(model_data["dataset"], model_data["dataset_config_name"], split="test"))
     return data.train_test_split(train_size=train_size, seed=seed)[split]
+
+
+def get_metric_from_catecory(category):
+    metric = None
+    match category:
+        case "INCModelForSequenceClassification" | "INCModelForMaskedLM" | "INCModelForMultipleChoice":
+            metric = evaluate.load("accuracy")
+        case "INCModelForQuestionAnswering":
+            metric = evaluate.load("squad")
+        case "INCModelForTokenClassification":
+            metric = evaluate.load("f1")
+
+    return metric

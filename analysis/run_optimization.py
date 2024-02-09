@@ -20,16 +20,17 @@ quantization_config = PostTrainingQuantConfig(
 )
 
 
-def eval_func(model):
-    pipe.model = model
+def eval_func(model_eval):
+    pipe.model = model_eval
     # SequenceClassification is actually "text-classification"
     task_evaluator = evaluator(model_data['task'])
     results = task_evaluator.compute(
         model_or_pipeline=pipe,
         data=dataset,
-        metric=load("accuracy")
+        metric=get_metric_from_catecory(model_data['category']),
+        label_mapping=model_eval.config.label2id
     )
-    return results["accuracy"]
+    return list(results.values())[0]
 
 
 def run_optimization(save_dir):
