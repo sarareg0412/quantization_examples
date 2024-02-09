@@ -358,7 +358,7 @@ def preprocess_tokenized_data(data, model_name):
 def get_multichoice_output(data, model, model_name):
     tokenizer = get_processor_from_category('INCModelForMultipleChoice', model_name)
     labels = torch.tensor(0).unsqueeze(0)
-    MAX_TOKEN_LENGTH = tokenizer.model_max_length-4
+    MAX_TOKEN_LENGTH = tokenizer.model_max_length - 4
     questionTokens = tokenizer.encode(data['question'], truncation=True, max_length=MAX_TOKEN_LENGTH)[1:-1]
     contextTokens = tokenizer.encode(data['article'], truncation=True, max_length=MAX_TOKEN_LENGTH)[1:-1]
     answers = data['options']
@@ -435,10 +435,10 @@ def convert_to_nums(path):
     map_dict = {label: i for i, label in enumerate(["A", "B", "C", "D"])}
     content_mapped = [[map_dict[x]] for x in content]
     new_filename = os.path.splitext(path)[0] + '_copy.csv'
-    write_csv(new_filename,content_mapped)
+    write_csv(new_filename, content_mapped)
 
 
-def get_split_dataset(model_data, train_size, seed, split= 'train'):
+def get_split_dataset(model_data, train_size, seed, split='train'):
     data = (load_dataset(model_data["dataset"], model_data["dataset_config_name"], split="test"))
     return data.train_test_split(train_size=train_size, seed=seed)[split]
 
@@ -452,5 +452,16 @@ def get_metric_from_category(category):
             metric = evaluate.load("squad")
         case "INCModelForTokenClassification":
             metric = evaluate.load("f1")
+
+    return metric
+
+
+def get_metric_name_from_category(category):
+    metric = ''
+    match category:
+        case "INCModelForSequenceClassification" | "INCModelForMaskedLM" | "INCModelForMultipleChoice":
+            metric = "accuracy"
+        case "INCModelForQuestionAnswering" | "INCModelForTokenClassification":
+            metric = "f1"
 
     return metric

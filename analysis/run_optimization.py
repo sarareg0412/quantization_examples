@@ -44,7 +44,7 @@ def eval_func(model_eval):
         **args
     )
 
-    return list(results.values())[0]
+    return results[get_metric_name_from_category(model_data['category'])]
 
 
 def run_optimization(save_dir):
