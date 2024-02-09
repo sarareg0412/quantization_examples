@@ -30,6 +30,7 @@ def eval_func(model_eval):
         - `"token-classification"`
     """
     task_evaluator = evaluator(model_data['task'])
+
     args = {
         "model_or_pipeline": pipe,
         "data": dataset,
