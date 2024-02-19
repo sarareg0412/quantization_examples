@@ -71,6 +71,7 @@ N_EXPERIMENTS = 0
 SEED = 42
 QUANT_SPLIT_PERCENT = 0.2  # Quantization split percentage
 TEST_DATA_PERCENT = 0.05
+USE_OPTIM = True
 
 
 def print_size_of_model(model):
@@ -142,8 +143,19 @@ def get_model_from_library(library, category, model_path, quantized=False):
 
 
 def get_quantized_model_path(category, model_name):
+    config_dir = "config"
+    if USE_OPTIM:
+        config_dir = "optim/" + config_dir
     # The quantized model is located in the directory like: ./category/model_name_formatted/config
-    return os.path.join(os.getcwd(), category, format_name(model_name), "config")
+    return os.path.join(os.getcwd(), category, format_name(model_name), config_dir)
+
+
+def get_output_file_name(category, model_name, quantized):
+    file_name = f"{'' if quantized else 'N'}Q_output.csv"
+    if USE_OPTIM:
+        file_name = "res/" + file_name
+    # The output file of the model is of the name: ./category/model_name_formatted/NQ_output.csv
+    return os.path.join(os.getcwd(), category, format_name(model_name), file_name)
 
 
 def get_processor_from_category(category, model_name):

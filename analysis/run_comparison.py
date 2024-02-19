@@ -16,7 +16,7 @@ def run_comparison(line, train_size=TEST_DATA_PERCENT, seed = SEED):
             "python", "evaluate_HF.py", "{}".format(line), 'seqeval'])
     else:
         dataset_file_path = f"INCModelForMaskedLM/{format_name(model_data['model_name'])}/dataset.csv"
-        if (os.path.isfile(dataset_file_path)):
+        if model_data['category'] == 'INCModelForTMaskedLM' and os.path.isfile(dataset_file_path):
             print(f"Reading {dataset_file_path} as dataset")
             data = read_csv(dataset_file_path, ["masked_input", "true_label"], 1)
         else:
@@ -28,8 +28,8 @@ def run_comparison(line, train_size=TEST_DATA_PERCENT, seed = SEED):
 
         print(f"Evaluating Data for model {model_data['model_name']} and "
               f"Dataset {model_data['dataset']}/{model_data['dataset_config_name']}")
-        NQ_output = (f"{model_data['category']}/{format_name(model_data['model_name'])}/NQ_output.csv")
-        Q_output = (f"{model_data['category']}/{format_name(model_data['model_name'])}/Q_output.csv")
+        NQ_output = get_output_file_name(model_data['category'], model_data['model_name'], False)
+        Q_output = get_output_file_name(model_data['category'], model_data['model_name'], True)
 
         # Open the CSV file and skip the header row
         with open(NQ_output, 'r') as file:

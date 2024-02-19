@@ -112,7 +112,7 @@ def run_optimization():
     top_N_models = get_models_line_from_csv(cat)
     line = top_N_models[model_id]  # cardiffNLP
     model_data = get_model_data_from_line(line)
-    save_model_dir = "{}/{}/opt_quant/config".format(model_data["category"], format_name(model_data['model_name']))
+    save_model_dir = "{}/{}/optim/config".format(model_data["category"], format_name(model_data['model_name']))
     print("START QUANTIZATION OPTIMIZATION FOR MODEL {}".format(model_data["model_name"]))
     subprocess.run(["python", "run_optimization.py", "{}".format(line), "{}".format(save_model_dir)])
 

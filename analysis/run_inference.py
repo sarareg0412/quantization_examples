@@ -25,8 +25,7 @@ def run_inference_from_line(is_quantized, line, train_size=TEST_DATA_PERCENT, se
 
     model = get_model_from_library(model_data["library"], model_data["category"], model_path, quantized=quantized)
     processor = get_processor_from_category(model_data["category"], model_data["model_name"])
-    output_file_name = (f"{model_data['category']}/{format_name(model_data['model_name'])}/"
-                        f"{'' if quantized else 'N'}Q_output.csv")
+    output_file_name = get_output_file_name(model_data['category'], model_data['model_name'], quantized)
 
     print(f"PERFORMING INFERENCE on {'QUANTIZED ' if quantized else ' '}{model_data['model_name']} and "
           f"{model_data['dataset']}/{model_data['dataset_config_name']}")
@@ -48,7 +47,8 @@ def run_inference_from_line(is_quantized, line, train_size=TEST_DATA_PERCENT, se
                 # Since there might be multiple labels with multiple scores associated, we get the first one.
                 prediction = get_prediction(out, model_data["category"], model.config.label2id)
                 writer.writerow(prediction)
-        print("Done")
+
+    print(f"OUTPUT SAVED TO {output_file_name}")
 
 
 def map_data(data, model_data):
