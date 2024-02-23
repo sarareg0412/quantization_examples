@@ -8,7 +8,7 @@ from utils import *
 exact_match = evaluate.load("exact_match")
 
 
-def run_comparison(line, train_size=TEST_DATA_PERCENT, seed = SEED):
+def run_comparison(line, seed= SEED):
     model_data = get_model_data_from_line(line)
     if model_data['category'] == 'INCModelForToken':
         subprocess.run([
@@ -21,7 +21,10 @@ def run_comparison(line, train_size=TEST_DATA_PERCENT, seed = SEED):
             data = read_csv(dataset_file_path, ["masked_input", "true_label"], 1)
         else:
             print(f"Loading dataset from hub")
-            data = get_split_dataset(model_data, train_size=train_size, seed=seed)
+            data = get_split_dataset(model_data)
+
+        if seed != SEED:
+            data = split_dataset_for_evaluation(data, seed)
 
         # Initialize lists to store references and predictions for accuracy evaluation
         references = get_references(model_data["category"], data, model_data['model_name'])
@@ -30,6 +33,7 @@ def run_comparison(line, train_size=TEST_DATA_PERCENT, seed = SEED):
               f"Dataset {model_data['dataset']}/{model_data['dataset_config_name']}")
         NQ_output = get_output_file_name(model_data['category'], model_data['model_name'], False)
         Q_output = get_output_file_name(model_data['category'], model_data['model_name'], True)
+        print(f"Output files: {NQ_output}; {Q_output}")
 
         # Open the CSV file and skip the header row
         with open(NQ_output, 'r') as file:
@@ -41,14 +45,14 @@ def run_comparison(line, train_size=TEST_DATA_PERCENT, seed = SEED):
             # Read the remaining rows into a list
             q_predictions = reduce_to_1D_list(list(csv_reader))
 
-        if (model_data["category"] == 'INCModelForQuestionAnswering'):
+        if model_data["category"] == 'INCModelForQuestionAnswering':
             # Perform exact match score before mapping the nq and q prediction arrays in case the task is question answering
             exact_match_score = exact_match.compute(predictions=q_predictions, references=nq_predictions)
 
         nq_predictions = get_predictions(model_data["category"], nq_predictions, references)
         q_predictions = get_predictions(model_data["category"], q_predictions, references)
 
-        if (model_data["category"] == 'INCModelForTokenClassification'):
+        if model_data["category"] == 'INCModelForTokenClassification':
             level_lists(q_predictions, nq_predictions)
             nq_predictions = reduce_to_1D_list(nq_predictions)
             q_predictions = reduce_to_1D_list(q_predictions)
@@ -56,7 +60,7 @@ def run_comparison(line, train_size=TEST_DATA_PERCENT, seed = SEED):
             print(f"Exact match score is : {exact_match_score}")
             return exact_match_score
 
-        if (model_data["category"] != 'INCModelForQuestionAnswering'):
+        if model_data["category"] != 'INCModelForQuestionAnswering':
             exact_match_score = exact_match.compute(predictions=q_predictions, references=nq_predictions)
 
         # Calculate performance using the loaded metric
@@ -68,6 +72,7 @@ def run_comparison(line, train_size=TEST_DATA_PERCENT, seed = SEED):
         print(f"Q model metric score is : {Q_metric}")
         print(f"Exact match score is : {exact_match_score}")
         return get_final_dict(NQ_metric, Q_metric, exact_match_score)
+
 
 def get_references(category, data, model_name):
     references = []
@@ -105,7 +110,6 @@ def get_predictions(category, prediction, references=None):
             prediction = tokens_dict
 
     return prediction
-
 
 
 def get_final_dict(NQ_metric, Q_metric, exact_match):

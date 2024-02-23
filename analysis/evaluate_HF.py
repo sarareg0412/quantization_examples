@@ -10,7 +10,7 @@ from optimum.intel import INCModelForTokenClassification
 def compare_models_HF(line, metric):
     model_data = get_model_data_from_line(line)
     data = (load_dataset(model_data["dataset"], model_data["dataset_config_name"], split="test"))
-    data = (data.train_test_split(train_size=TEST_DATA_PERCENT, seed=SEED)["train"])
+    data = (data.train_test_split(train_size=TRAIN_DATA_PERCENT, seed=SEED)["train"])
 
     task_evaluator = evaluator(model_data['task'])
     q_model = INCModelForTokenClassification.from_pretrained(get_quantized_model_path(model_data["category"], model_data["model_name"]))

@@ -1,15 +1,13 @@
-import sys
-
 from run_inference import *
-from analysis.utils import get_model_data_from_line
 from run_comparison import *
 
 N_EXP = 10
+
+
 def create_evaluation_csv(file_name):
     with open(file_name, mode='w', newline='') as file:
         writer = csv.writer(file)
         writer.writerow(['category', 'model_name', 'metric', 'value', 'seed'])     # Create the header
-
 
 
 def run_experiments(line):
@@ -17,7 +15,6 @@ def run_experiments(line):
     rng = np.random.default_rng(seed=SEED)
     seeds = list(rng.integers(low=0, high=100, size=N_EXP))
     print(seeds)
-    train_size = 0.02
     file_name = f'./{model_data["category"]}/{format_name(model_data["model_name"])}/evaluation_results.csv'
     create_evaluation_csv(file_name)
 
@@ -25,11 +22,11 @@ def run_experiments(line):
 
     for seed in seeds:
         # Run inference for both models
-        run_inference_from_line('True', line, train_size, seed)
-        run_inference_from_line('False', line, train_size, seed)
+        run_inference_from_line('True', line, seed)
+        run_inference_from_line('False', line, seed)
         # Evaluate the models and add the results to a csv file
-        result_dict = run_comparison(line, train_size, seed)
-        content = format_result_dict(model_data,result_dict, seed)
+        result_dict = run_comparison(line, seed)
+        content = format_result_dict(model_data, result_dict, seed)
         write_csv(file_name, content=content, mode='a')
 
 

@@ -1,0 +1,6 @@
+model_name,likes,downloads,category,task,library,dataset,dataset_config_name
+huggingface/CodeBERTa-small-v1,57,83155,INCModelForMaskedLM,fill-mask,transformers,code_search_net,all
+anakin87/electra-italian-xxl-cased-squad-it,7,6,INCModelForQuestionAnswering,question-answering,transformers,squad_it,
+cardiffnlp/twitter-roberta-base-sentiment-latest,277,22948384,INCModelForSequenceClassification,text-classification,transformers,tweet_eval,sentiment
+dslim/bert-base-NER,322,790885,INCModelForTokenClassification,token-classification,transformers,conll2003,
+LIAMF-USP/roberta-large-finetuned-race,9,332,INCModelForMultipleChoice,multiple-choice,transformers,race,all

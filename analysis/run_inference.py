@@ -9,9 +9,12 @@ from transformers import pipeline
 from datasets import load_dataset
 
 
-def run_inference_from_line(is_quantized, line, train_size=TEST_DATA_PERCENT, seed=SEED):
+def run_inference_from_line(is_quantized, line, seed=SEED):
     model_data = get_model_data_from_line(line)
-    data = get_split_dataset(model_data, train_size=train_size, seed=seed)
+    data = get_split_dataset(model_data)
+    if seed != SEED:
+        print(f"DETECTED SEED {seed}")
+        data = split_dataset_for_evaluation(data, seed)
 
     # map the dataset based on the category
     data = map_data(data, model_data)
@@ -27,7 +30,7 @@ def run_inference_from_line(is_quantized, line, train_size=TEST_DATA_PERCENT, se
     processor = get_processor_from_category(model_data["category"], model_data["model_name"])
     output_file_name = get_output_file_name(model_data['category'], model_data['model_name'], quantized)
 
-    print(f"PERFORMING INFERENCE on {'QUANTIZED ' if quantized else ' '}{model_data['model_name']} and "
+    print(f"PERFORMING INFERENCE on {'QUANTIZED ' if quantized else ' '}{model_path} and "
           f"{model_data['dataset']}/{model_data['dataset_config_name']}")
 
     with open(output_file_name, mode='w', newline='') as file:

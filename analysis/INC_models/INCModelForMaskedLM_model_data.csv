@@ -1,5 +1,5 @@
 model_name,likes,downloads,category,task,library,dataset,dataset_config_name
-huggingface/CodeBERTa-small-v1,57,83155,INCModelForMaskedLM,fill-mask,transformers,code_search_net,python
+huggingface/CodeBERTa-small-v1,57,83155,INCModelForMaskedLM,fill-mask,transformers,code_search_net,all
 PORTULAN/albertina-900m-portuguese-ptbr-encoder-brwac,37,242,INCModelForMaskedLM,fill-mask,transformers,assin2,
 markussagen/xlm-roberta-longformer-base-4096,31,133,INCModelForMaskedLM,fill-mask,transformers,wikitext,wikitext-103-raw-v1
 PORTULAN/albertina-900m-portuguese-ptpt-encoder,23,490,INCModelForMaskedLM,fill-mask,transformers,assin2,

@@ -10,7 +10,7 @@ processor = None
 model = None
 # Set up quantization configuration and the maximum number of trials to 10
 tuning_criterion = TuningCriterion(max_trials=10)
-accuracy_criterion = AccuracyCriterion(tolerable_loss=0.05)
+accuracy_criterion = AccuracyCriterion(tolerable_loss=0.01)
 
 # Load the quantization configuration detailing the quantization we wish to apply
 quantization_config = PostTrainingQuantConfig(
@@ -59,9 +59,8 @@ def run_optimization(save_dir):
 
 if __name__ == "__main__":
     model_data = get_model_data_from_line(sys.argv[1])
-    dataset = get_split_dataset(model_data, train_size=0.5, seed=SEED, split='test')
+    dataset = get_split_dataset(model_data, split='train')
     processor = get_processor_from_category(model_data['category'], model_data['model_name'])
-    #processor = AutoTokenizer.from_pretrained(model_data['model_name'], model_max_length=512)
     model = get_model_from_library(model_data["library"], model_data["category"], model_data["model_name"])
     pipe = pipeline(model_data['task'], model=model, tokenizer=processor)
 

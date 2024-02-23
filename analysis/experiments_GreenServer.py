@@ -1,13 +1,24 @@
 import csv
 import os
 
-from utils import csv_name, get_model_data_from_line, format_name, N_EXPERIMENTS
+from utils import csv_name, get_model_data_from_line, format_name, N_EXPERIMENTS, read_csv
 import subprocess
 from run_comparison import run_comparison
 from run_experiments import run_experiments
 
-cat = "SequenceClassification"
 model_id = 1
+top_5_filename = f"./INC_models/{csv_name}"
+
+
+def get_top_5_models_line_from_csv():
+    with open(top_5_filename) as file:
+        csvReader = csv.reader(file)
+        # ['model_name', 'likes', 'downloads', 'category', 'task', 'library', 'dataset', 'dataset_config_name']
+        csvReader.__next__()  # Skip header
+        # choose the first 5 lines out of every 50 lines of the file
+        lines = [",".join(line) for line in csvReader]
+
+    return lines
 
 
 def get_models_line_from_csv(category):
@@ -23,7 +34,7 @@ def get_models_line_from_csv(category):
 
 
 def quantize_and_measure_consumption():
-    top_N_models = get_models_line_from_csv(cat)
+    top_N_models = get_top_5_models_line_from_csv()
     line = top_N_models[model_id]  # bart-large-cnn
     model_data = get_model_data_from_line(line)
 
@@ -53,7 +64,7 @@ def quantize_and_measure_consumption():
 
 def infer_and_measure_consumption(quantized):
     # Load models from csv file
-    top_N_models = get_models_line_from_csv(cat)
+    top_N_models = get_top_5_models_line_from_csv()
     line = top_N_models[model_id]  # cardiffNLP
 
     model_data = get_model_data_from_line(line)
@@ -78,16 +89,16 @@ def infer_and_measure_consumption(quantized):
         print("START INFERENCE FOR {}MODEL {} - EXP {}".format("QUANTIZED " if quantized else "",
                                                                model_data["model_name"], n_experiment))
         subprocess.run([
-                        # "../energibridge", "-o", "{}".format(energy_output_file),
-                        "python", "run_inference.py", "{}".format(str(quantized)),
-                        "{}".format(line)])
+            # "../energibridge", "-o", "{}".format(energy_output_file),
+            "python", "run_inference.py", "{}".format(str(quantized)),
+            "{}".format(line)])
         print("END INFERENCE FOR {}MODEL {} - EXP {}".format("QUANTIZED " if quantized else "",
                                                              model_data["model_name"], n_experiment))
 
 
 def compare_models():
     # Load models from csv file
-    top_N_models = get_models_line_from_csv(cat)
+    top_N_models = get_top_5_models_line_from_csv()
     line = top_N_models[model_id]
     # for n_experiment in range(0, N_EXPERIMENTS + 1):
     run_comparison(line)
@@ -95,31 +106,38 @@ def compare_models():
 
 def use_evaluate_hf():
     # Load models from csv file
-    top_N_models = get_models_line_from_csv(cat)
+    top_N_models = get_top_5_models_line_from_csv()
     line = top_N_models[model_id]  # cardiffNLP
     subprocess.run(["python", "evaluate_HF.py", "{}".format(line), 'seqeval'])
 
 
 def run_experiments_and_create_csv():
     # Load models from csv file
-    top_N_models = get_models_line_from_csv(cat)
+    top_N_models = get_top_5_models_line_from_csv()
     line = top_N_models[model_id]
     run_experiments(line)
 
 
 def run_optimization():
     # Load models from csv file
-    top_N_models = get_models_line_from_csv(cat)
+    top_N_models = get_top_5_models_line_from_csv()
     line = top_N_models[model_id]  # cardiffNLP
     model_data = get_model_data_from_line(line)
     save_model_dir = "{}/{}/optim/config".format(model_data["category"], format_name(model_data['model_name']))
     print("START QUANTIZATION OPTIMIZATION FOR MODEL {}".format(model_data["model_name"]))
     subprocess.run(["python", "run_optimization.py", "{}".format(line), "{}".format(save_model_dir)])
 
-#quantize_and_measure_consumption()
-#infer_and_measure_consumption(True)
-#infer_and_measure_consumption(False)
-#compare_models()
-#use_evaluate_hf()
-#run_experiments_and_create_csv()
+
+def run_validation():
+    lines = read_csv(csv_name, True)
+    for line in lines:
+        run_experiments(line)
+
+
+# quantize_and_measure_consumption()
+# infer_and_measure_consumption(True)
+# infer_and_measure_consumption(False)
+# compare_models()
+# use_evaluate_hf()
+# run_experiments_and_create_csv()
 run_optimization()

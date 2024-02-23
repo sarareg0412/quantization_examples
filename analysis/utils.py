@@ -67,11 +67,10 @@ csv_name = "model_data.csv"
 csv_header = ['model_name', 'likes', 'downloads', 'category', 'task', 'library', 'dataset', 'dataset_config_name']
 N_MODELS = 50
 SIMPLE_FILTER = False
-N_EXPERIMENTS = 0
+N_EXPERIMENTS = 30
 SEED = 42
-QUANT_SPLIT_PERCENT = 0.2  # Quantization split percentage
-TEST_DATA_PERCENT = 0.05
-USE_OPTIM = True
+TRAIN_DATA_PERCENT = 0.5
+USE_OPTIM = False
 
 
 def print_size_of_model(model):
@@ -153,6 +152,7 @@ def get_quantized_model_path(category, model_name):
 def get_output_file_name(category, model_name, quantized):
     file_name = f"{'' if quantized else 'N'}Q_output.csv"
     if USE_OPTIM:
+        # TODO add /res dir creation
         file_name = "res/" + file_name
     # The output file of the model is of the name: ./category/model_name_formatted/NQ_output.csv
     return os.path.join(os.getcwd(), category, format_name(model_name), file_name)
@@ -442,17 +442,15 @@ def read_csv(file_name, header=None, column_index=0):
     return content
 
 
-def convert_to_nums(path):
-    content = read_csv(path)
-    map_dict = {label: i for i, label in enumerate(["A", "B", "C", "D"])}
-    content_mapped = [[map_dict[x]] for x in content]
-    new_filename = os.path.splitext(path)[0] + '_copy.csv'
-    write_csv(new_filename, content_mapped)
-
-
-def get_split_dataset(model_data, train_size, seed, split='train'):
+def get_split_dataset(model_data, split='test'):
+    # Retrieve test dataset from HF hub
     data = (load_dataset(model_data["dataset"], model_data["dataset_config_name"], split="test"))
-    return data.train_test_split(train_size=train_size, seed=seed)[split]
+    # Return a further split
+    return data.train_test_split(train_size=TRAIN_DATA_PERCENT, seed=SEED)[split]
+
+
+def split_dataset_for_evaluation(data, seed):
+    return data.train_test_split(train_size=0.6, seed=seed)['test']
 
 
 def get_metric_from_category(category):
