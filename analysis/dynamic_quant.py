@@ -130,11 +130,11 @@ def compare_models():
 
 
 def run_validation():
-    #    for model_line in get_top_5_models_line_from_csv(top_5_filename):
-    #        run_experiments(model_line)
+    for model_line in get_top_5_models_line_from_csv():
+        run_experiments(model_line)
     # TODO run again with USE_OPTIM = True
-    optim_model = get_top_5_models_line_from_csv()[1]
-    run_experiments(optim_model)
+    #optim_model = get_top_5_models_line_from_csv()[1]
+    #run_experiments(optim_model)
 
 
 #quantize_and_measure_consumption()

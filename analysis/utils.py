@@ -68,7 +68,7 @@ csv_header = ['model_name', 'likes', 'downloads', 'category', 'task', 'library',
 N_MODELS = 50
 SIMPLE_FILTER = False
 N_EXPERIMENTS = 30
-SEED = 42
+SEED = 123
 TRAIN_DATA_PERCENT = 0.5
 USE_OPTIM = False
 
@@ -229,11 +229,11 @@ def normalize_text(s):
 
 # generate_metric_charts("../../../../ENERGY_DATA/cardiff-latest/quant_energy_data")
 # Masked LM
-def create_maskedlm_examples(data, model_name):
-    dataset_file_path = f"INCModelForMaskedLM/{format_name(model_name)}/dataset.csv"
+def create_maskedlm_examples(data, model_name, seed):
+    dataset_file_path = f"INCModelForMaskedLM/{format_name(model_name)}/dataset{seed}.csv"
     tokenizer = get_processor_from_category("INCModelForMaskedLM", model_name)
     if (os.path.isfile(dataset_file_path)):
-        print(f"Reading {dataset_file_path} as dataset")
+        print(f"SEED {seed}: Reading {dataset_file_path} as dataset")
         dataset = read_csv(dataset_file_path, ["masked_input", "true_label"])
         # Convert the string of tokens into an array
         dataset = [ast.literal_eval(line) for line in dataset]
@@ -241,7 +241,8 @@ def create_maskedlm_examples(data, model_name):
         dataset = [tokenizer.decode(line) for line in dataset]
         return dataset
     else:
-        random.seed(10)
+        print(f"Creating a new dataset")
+        random.seed(seed)
         mask_token = tokenizer.mask_token_id
 
         def tokenize_function(examples):

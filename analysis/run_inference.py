@@ -54,7 +54,7 @@ def run_inference_from_line(is_quantized, line, seed=SEED):
     print(f"OUTPUT SAVED TO {output_file_name}")
 
 
-def map_data(data, model_data):
+def map_data(data, model_data, seed):
     category = model_data["category"]
     print("Preprocessing dataset...")
     match category:
@@ -63,7 +63,7 @@ def map_data(data, model_data):
         case "INCModelForQuestionAnswering":
             data = ListDataset(create_squad_examples(data))
         case "INCModelForMaskedLM":
-            data = ListDataset(create_maskedlm_examples(data, model_data["model_name"]))
+            data = ListDataset(create_maskedlm_examples(data, model_data["model_name"], seed))
         case "INCModelForTokenClassification":
             data = ListDataset(create_tokenclass_examples(data, model_data['model_name']))
         case "INCModelForMultipleChoice":
