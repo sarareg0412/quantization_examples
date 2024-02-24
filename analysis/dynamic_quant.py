@@ -138,7 +138,7 @@ def run_validation():
 
 
 #quantize_and_measure_consumption()
-run_optimization()
-infer_and_measure_consumption(True)
-infer_and_measure_consumption(False)
-#run_validation()
+run_validation()
+#run_optimization()
+#infer_and_measure_consumption(True)
+#infer_and_measure_consumption(False)

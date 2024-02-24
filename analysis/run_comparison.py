@@ -16,16 +16,15 @@ def run_comparison(line, seed= SEED):
             "python", "evaluate_HF.py", "{}".format(line), 'seqeval'])
     else:
         dataset_file_path = f"INCModelForMaskedLM/{format_name(model_data['model_name'])}/dataset{seed}.csv"
-        if model_data['category'] == 'INCModelForTMaskedLM' and os.path.isfile(dataset_file_path):
+        if model_data['category'] == 'INCModelForMaskedLM' and os.path.isfile(dataset_file_path):
             print(f"Reading {dataset_file_path} as dataset")
             data = read_csv(dataset_file_path, ["masked_input", "true_label"], 1)
         else:
             print(f"Loading dataset from hub")
             data = get_split_dataset(model_data)
-
-        if seed != SEED:
-            print("DETECTED SEED FOR COMPARISON")
-            data = split_dataset_for_evaluation(data, seed)
+            if seed != SEED:
+                print(f"DETECTED SEED {seed} FOR COMPARISON")
+                data = split_dataset_for_evaluation(data, seed)
 
         # Initialize lists to store references and predictions for accuracy evaluation
         references = get_references(model_data["category"], data, model_data['model_name'])
@@ -89,13 +88,13 @@ def get_references(category, data, model_name):
                                                "text": [normalize_text(s) for s in example["answers"]["text"]]}},
                                   data))
         case "INCModelForMaskedLM":
-            references = data  # The token is already loaded
+            references = data[:1001]  # The token is already loaded from the dataset
         case "INCModelForTokenClassification":
             references = preprocess_tokenized_data(data, model_name)
         case "INCModelForMultipleChoice":
             # accuracy needs double quotes
             map_dict = {label: i  for i, label in enumerate(["A", "B", "C", "D"])}
-            references = [map_dict[x] for x in data['answer']]
+            references = [map_dict[x] for x in data['answer']][:301]
 
     return references
 

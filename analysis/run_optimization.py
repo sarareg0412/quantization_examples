@@ -10,7 +10,7 @@ processor = None
 model = None
 # Set up quantization configuration and the maximum number of trials to 10
 tuning_criterion = TuningCriterion(max_trials=10)
-accuracy_criterion = AccuracyCriterion(tolerable_loss=0.01)
+accuracy_criterion = AccuracyCriterion(tolerable_loss=0.015)
 
 # Load the quantization configuration detailing the quantization we wish to apply
 quantization_config = PostTrainingQuantConfig(

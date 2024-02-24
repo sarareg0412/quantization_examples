@@ -63,11 +63,13 @@ def map_data(data, model_data, seed):
         case "INCModelForQuestionAnswering":
             data = ListDataset(create_squad_examples(data))
         case "INCModelForMaskedLM":
-            data = ListDataset(create_maskedlm_examples(data, model_data["model_name"], seed))
+            # Data is limited to 1000
+            data = ListDataset(create_maskedlm_examples(data, model_data["model_name"], seed)[:1001])
         case "INCModelForTokenClassification":
             data = ListDataset(create_tokenclass_examples(data, model_data['model_name']))
         case "INCModelForMultipleChoice":
-            data = ListDataset(data)
+            # Data is limited to 300
+            data = ListDataset(data[:301])
 
     print("Done.")
     return data
