@@ -17,7 +17,7 @@ def run_inference_from_line(is_quantized, line, seed=SEED):
         data = split_dataset_for_evaluation(data, seed)
 
     # map the dataset based on the category
-    data = map_data(data, model_data)
+    data = map_data(data, model_data, seed)
 
     quantized = True if (is_quantized == "True") else False
     model_path = get_quantized_model_path(model_data["category"], model_data["model_name"])

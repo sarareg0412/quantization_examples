@@ -15,7 +15,7 @@ def run_comparison(line, seed= SEED):
             # "../energibridge", "-o", "{}".format(energy_output_file),
             "python", "evaluate_HF.py", "{}".format(line), 'seqeval'])
     else:
-        dataset_file_path = f"INCModelForMaskedLM/{format_name(model_data['model_name'])}/dataset.csv"
+        dataset_file_path = f"INCModelForMaskedLM/{format_name(model_data['model_name'])}/dataset{seed}.csv"
         if model_data['category'] == 'INCModelForTMaskedLM' and os.path.isfile(dataset_file_path):
             print(f"Reading {dataset_file_path} as dataset")
             data = read_csv(dataset_file_path, ["masked_input", "true_label"], 1)
@@ -24,6 +24,7 @@ def run_comparison(line, seed= SEED):
             data = get_split_dataset(model_data)
 
         if seed != SEED:
+            print("DETECTED SEED FOR COMPARISON")
             data = split_dataset_for_evaluation(data, seed)
 
         # Initialize lists to store references and predictions for accuracy evaluation
