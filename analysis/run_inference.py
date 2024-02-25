@@ -69,7 +69,7 @@ def map_data(data, model_data, seed):
             data = ListDataset(create_tokenclass_examples(data, model_data['model_name']))
         case "INCModelForMultipleChoice":
             # Data is limited to 300
-            data = ListDataset(data[:301])
+            data = ListDataset(data.to_list()[:301])
 
     print("Done.")
     return data

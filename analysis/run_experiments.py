@@ -15,7 +15,7 @@ def run_experiments(line):
     rng = np.random.default_rng(seed=SEED)
     seeds = list(rng.integers(low=0, high=100, size=N_EXP))
     print(seeds)
-    file_name = f'./{model_data["category"]}/{format_name(model_data["model_name"])}/evaluation_results.csv'
+    file_name = f'./{model_data["category"]}/{format_name(model_data["model_name"])}/{format_name(model_data["model_name"])}_evaluation_results.csv'
     create_evaluation_csv(file_name)
 
     # Create the

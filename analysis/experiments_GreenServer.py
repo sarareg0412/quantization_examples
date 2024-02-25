@@ -129,9 +129,9 @@ def run_optimization():
 
 
 def run_validation():
-    lines = read_csv(csv_name, True)
-    for line in lines:
-        run_experiments(line)
+    for model_line in get_top_5_models_line_from_csv():
+        run_experiments(model_line)
+
 
 
 # quantize_and_measure_consumption()
