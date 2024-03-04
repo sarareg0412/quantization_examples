@@ -3,7 +3,11 @@ import matplotlib.pyplot as plt
 import os
 
 import seaborn as sns
-sns.set()
+
+from analysis.utils import read_csv
+
+#sns.set()
+sns.set_theme(style="whitegrid")
 import numpy as np
 
 
@@ -64,7 +68,8 @@ def generate_violin_charts(path: str):
         data_quant = get_data_from_path(os.path.join(path, 'quant_energy_data'))
         data_inf_Q = get_data_from_path(os.path.join(path, 'inf_energy_data/quant'))
         # Sum the quantization energy consumption to the inference of the quantized model
-        tot_quant_data = [sum(x) for x in zip(data_quant, data_inf_Q)]
+        #tot_quant_data = [sum(x) for x in zip(data_quant, data_inf_Q)]
+        tot_quant_data = data_inf_Q
         data_inf_NQ = get_data_from_path(os.path.join(path, 'inf_energy_data/non_quant'))
 
         df = pd.DataFrame({'Quantized model': tot_quant_data, 'Non Quantized model':data_inf_NQ})
@@ -158,6 +163,56 @@ def generate_metric_charts_csv(csv_file):
     fig.tight_layout()
     plt.show()
 
+def plot_mean_stdv(path):
 
-generate_violin_charts("../../../../ENERGY_DATA/sequence_classification")
+    for file in os.listdir(path):
+        fig, ax = plt.subplots(1, 1, figsize=(8, 4))
+        # Generate two different arrays
+        df = pd.read_csv(os.path.join(path, file))
+        if df["category"][0] == "INCModelForTokenClassification":
+            continue
+        seeds = list(set(df["seed"].to_list()))
+        exact_match = [el for i, el in enumerate(df["value"]) if i % 3 == 0]
+        NQ = [el for i, el in enumerate(df["value"]) if i % 3 == 1]
+        Q = [el for i, el in enumerate(df["value"]) if i % 3 == 2]
+        metric = "F1 score" if df["category"][0] == "INCModelForQuestionAnswering" else "Accuracy Score"
+
+        # Calculate mean and standard deviation of both arrays
+        mean_NQ = np.mean(NQ)
+        std_dev_NQ = np.std(NQ)
+        mean_Q = np.mean(Q)
+        std_dev_Q = np.std(Q)
+
+        # Create a DataFrame from the lists
+        data = {'Category': seeds,
+                'NQ': NQ,
+                'Q': Q}
+        plot_data = pd.DataFrame(data)
+
+        # Melt the DataFrame to have a long-form data format
+        df_melted = pd.melt(plot_data, id_vars='Category', var_name='Models', value_name='Value')
+
+        # Create two barplots using Seaborn
+        # ci: confidence interval of standard deviation
+        sns.barplot(data=df_melted, x='Category', y='Value', hue='Models')
+        plt.title(f'{file}\n{metric} plots')
+        for i, el in enumerate(seeds):
+            plt.errorbar(std_dev_NQ, NQ[i])
+            plt.errorbar(std_dev_Q, Q[i])
+        plt.xlabel('Seed')
+        plt.ylabel(metric)
+        my_text = (f'Mean NQ = {mean_NQ:.3f}\nSTD Dev NQ = {std_dev_NQ:.4f}'
+                   f'\nMean Q = {mean_Q:.3f}\nSTD Dev Q = {std_dev_Q:.4f}')
+        props = dict(boxstyle='round', facecolor='grey', alpha=0.15)  # bbox features
+        ax.text(1.03, 0.98, my_text, transform=ax.transAxes, fontsize=12, verticalalignment='top', bbox=props)
+        plt.legend(title="Models", loc='lower right')
+        plt.tight_layout()
+        plt.show()
+        #plt.savefig(os.path.join(f"./plots/{path}_metrics_plot.png"))
+
+
+
+#generate_violin_charts("../../../../ENERGY_DATA/sequence_classification")
+#generate_violin_charts("INCModelForQuestionAnswering/optim-question-answ")
 #generate_metric_charts_csv("../../../../ENERGY_DATA/anakin/quant_energy_data/anakin87-electra-italian-xxl-cased-squad-it_quant_exp00.csv", )
+plot_mean_stdv("../../../../ENERGY_DATA/evaluation_results")
