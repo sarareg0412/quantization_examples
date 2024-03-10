@@ -424,12 +424,16 @@ class ListDataset(Dataset):
         return self.original_list[i]
 
 
-def write_csv(output_file_name, content, header=None, mode='w'):
+def write_csv(output_file_name, content, header=None, mode='w', single_row = False):
     with open(output_file_name, mode=mode, newline='') as file:
         writer = csv.writer(file)
         if header is not None:
             writer.writerow(header)
-        writer.writerows(content)
+        if content is not None:
+            if single_row:
+                writer.writerow(content)
+            else:
+                writer.writerows(content)
 
 
 def read_csv(file_name, header=None, column_index=0):
