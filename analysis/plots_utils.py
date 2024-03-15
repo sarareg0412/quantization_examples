@@ -5,11 +5,12 @@ import os
 import seaborn as sns
 
 from analysis.utils import write_csv
+import scipy.stats as stats
 
 # sns.set()
 sns.set_theme(style="whitegrid")
 import numpy as np
-
+from boxplot_and_jittered_points import plot_boxplot_and_jittered_points
 
 def generate_metric_charts(path: str, model_name):
     fig, ax = plt.subplots(figsize=[5, 3])
@@ -132,14 +133,42 @@ def generate_violin_charts_single(path: str, quant, quantization=False):
         plt.show()
 
 
-def get_data_from_path(path):
+def generate_boxplot_charts(father: str):
+    analysis_file = "plots/energy_plots/energy_analysis.csv"
+    write_csv(analysis_file, None, ["model_name", "energy", "quantized", "saved"])
+    for task in os.listdir(father):
+        path = os.path.join(father,task)
+        fig, (ax1,ax2) = plt.subplots(1, 2, sharey=True, squeeze=True, figsize=[7, 10])
+        #plt.figure(figsize=(7, 10))
+        if not os.path.isdir(path):
+            print(f"Path {path} not found")
+        else:
+            # Path is of the form 'INCModelFor.../model-name-formatted'
+            model_name = path.split('/')[-1]
+            data_inf_Q = get_data_from_path(os.path.join(path, 'inf_energy_data/quant'))
+            # Sum the quantization energy consumption to the inference of the quantized model
+            # tot_quant_data = [sum(x) for x in zip(data_quant, data_inf_Q)]
+            tot_quant_data = data_inf_Q
+            data_inf_NQ = get_data_from_path(os.path.join(path, 'inf_energy_data/non_quant'))
+            df = pd.DataFrame({'Quantized model': tot_quant_data, 'Non Quantized model': data_inf_NQ})
+
+            plot_boxplot_and_jittered_points(data_inf_Q, ax=ax2)
+            plot_boxplot_and_jittered_points(data_inf_NQ, ax= ax1)
+            plt.ylabel('Energy')
+            #plt.ylim(0)
+            plt.title(f"Model {model_name} Energy Data Plot")
+            plt.savefig(os.path.join(f"./plots/energy_plots/{model_name}_energy_data_plot.png"))
+    # plt.show()
+
+def get_data_from_path(path, verbose = True):
     all_data = []
     files = os.listdir(path)
     sorted_files = sorted(files, key=lambda x: x.split('_')[-1])
     for csv_file in sorted_files[1:21]:  # skip the first experiment
         if not csv_file.endswith(".csv"):
             continue
-        print(f"Reading csv file {csv_file}")
+        if verbose:
+            print(f"Reading csv file {csv_file}")
         df = pd.read_csv(os.path.join(path, csv_file))
         key = "PACAKGE_ENERGY (W)"
         if "CPU_ENERGY (J)" in df.columns:
@@ -167,7 +196,8 @@ def avg_metric(df: pd.DataFrame, metric_name: str):
     return all_data / nb_point
 
 
-def generate_metric_charts_csv(csv_file):
+def generate_metric_charts_csv(csv_file, experiment, quantized):
+    fig, ax = plt.subplots(1, 1, figsize=(8, 4))
     all_data = []
     if not os.path.exists(csv_file):
         raise ValueError(f'{csv_file} does not exist')
@@ -193,7 +223,7 @@ def generate_metric_charts_csv(csv_file):
         all_data.append({"Time": i, "CPU_POWER (Watts)": data[i]})
     fig, ax = plt.subplots(figsize=(10, 5))
     ax.plot(data, label="CPU Power")
-    ax.set_ylabel('watts')
+    ax.set_ylabel('Watts')
 
     ax2 = ax.twinx()
 
@@ -202,10 +232,14 @@ def generate_metric_charts_csv(csv_file):
     ax2.plot(df["USED_MEMORY"] * 100 / df["TOTAL_MEMORY"], label="Used Memory (%)", color="green")
     ax2.set_ylim([0, 100])
 
-    ax.set(xlabel=None)
-    fig.legend(loc='upper right')
+    ax.set(xlabel="Timeframe")
+    fig.legend(loc='lower right')
     fig.tight_layout()
-    plt.show()
+    #anakin87-electra-italian-xxl-cased-squad-it_quant_exp10.csv"
+    model_name = csv_file.split("/")[-1]
+    model_name = model_name.split("_")
+    plt.title(f'{quantized} {model_name[0]} Experiment {experiment} Energy plot')
+    plt.savefig(os.path.join(f"./plots/single_plots/{quantized}_{model_name[0]}_exp{experiment}.png"))
 
 
 def plot_mean_stdv(path):
@@ -221,7 +255,12 @@ def plot_mean_stdv(path):
         exact_match = [el for i, el in enumerate(df["value"]) if i % 3 == 0]
         NQ = [el for i, el in enumerate(df["value"]) if i % 3 == 1]
         Q = [el for i, el in enumerate(df["value"]) if i % 3 == 2]
-        metric = "F1 score" if df["category"][0] == "INCModelForQuestionAnswering" else "Accuracy Score"
+        if df["category"][0] == "INCModelForQuestionAnswering":
+            metric = "F1 score"
+            NQ = np.array(NQ) * 0.01
+            Q = np.array(Q) * 0.01
+        else:
+            metric = "Accuracy Score"
 
         # Calculate mean and standard deviation of both arrays
         mean_NQ = np.mean(NQ)
@@ -243,9 +282,6 @@ def plot_mean_stdv(path):
         # Create two barplots using Seaborn
         # ci: confidence interval of standard deviation
         sns.barplot(data=df_melted, x='Category', y='Value', hue='Models')
-        for i, el in enumerate(seeds):
-            plt.errorbar(std_dev_NQ, NQ[i])
-            plt.errorbar(std_dev_Q, Q[i])
         plt.xlabel('Seed')
         plt.ylabel(metric)
         model_name = file.split("_")[0]
@@ -258,11 +294,87 @@ def plot_mean_stdv(path):
         plt.title(f'{model_name}\n{metric} plots')
         plt.legend(title="Models", loc='lower right')
         plt.tight_layout()
+        plt.ylim(0,1)
         # plt.show()
         plt.savefig(os.path.join(f"./plots/performance/{model_name}_metrics_plot.png"))
 
+def plot_exact_match(path):
+    analysis_file = "plots/performance/exact_match_analysis.csv"
+    write_csv(analysis_file, None, ["model_name", "mean", "variance", "std_dev", "type"])
+    for file in os.listdir(path):
+        fig, ax = plt.subplots(1, 1, figsize=(8, 4))
+        # Generate two different arrays
+        df = pd.read_csv(os.path.join(path, file))
+        seeds = list(set(df["seed"].to_list()))
+        if df["category"][0] == "INCModelForTokenClassification":
+            exact_match = [el for el in df["value"]]
+        else:
+            exact_match = [el for i, el in enumerate(df["value"]) if i % 3 == 0]
+        metric = "Exact Match"
 
-generate_violin_charts("../../../../ENERGY_DATA/energy")
-#generate_metric_charts_csv("../../../../ENERGY_DATA/question_answering/quant_energy_data/anakin87-electra-italian-xxl-cased-squad-it_quant_exp10.csv", )
+        # Calculate mean and standard deviation of both arrays
+        mean = np.mean(exact_match)
+        var = np.var(exact_match)
+        std_dev = np.std(exact_match)
+
+        # Create a DataFrame from the lists
+        data = {'Category': seeds,
+                'Exact Match': exact_match
+                }
+        plot_data = pd.DataFrame(data)
+
+        # Melt the DataFrame to have a long-form data format
+        df_melted = pd.melt(plot_data, id_vars='Category', var_name='Models', value_name='Value')
+
+        # Create two barplots using Seaborn
+        # ci: confidence interval of standard deviation
+        sns.barplot(data=df_melted, x='Category', y='Value')
+
+        plt.xlabel('Seed')
+        plt.ylabel(metric)
+        model_name = file.split("_")[0]
+        write_csv(analysis_file, [model_name, mean, var, std_dev, "NQ"], None, 'a', True)
+        # my_text = (f'Mean NQ = {mean_NQ:.3f}\nSTD Dev NQ = {std_dev_NQ:.4f}\nVariance NQ = {var_NQ:.3f}'
+        #           f'\nMean Q = {mean_Q:.3f}\nSTD Dev Q = {std_dev_Q:.4f}\nVariance Q = {var_Q:.3f}')
+        props = dict(boxstyle='round', facecolor='grey', alpha=0.15)  # bbox features
+        # ax.text(1.03, 0.98, my_text, transform=ax.transAxes, fontsize=12, verticalalignment='top', bbox=props)
+        plt.title(f'{model_name}\n{metric} plots')
+        #plt.legend(title="Models", loc='lower right')
+        plt.ylim(0,1)
+        plt.tight_layout()
+        # plt.show()
+        plt.savefig(os.path.join(f"./plots/performance/{model_name}_exact_match_plot.png"))
+
+def welch_t_test(father):
+    analysis_file = "plots/energy_plots/welch_t_test.csv"
+    write_csv(analysis_file, None, ["model_name", "energy", "quantized", "saved"])
+    for task in os.listdir(father):
+        path = os.path.join(father, task)
+        # fig, axes = plt.subplots(figsize=[5, 3])
+        plt.figure(figsize=(7, 10))
+        if not os.path.isdir(path):
+            print(f"Path {path} not found")
+        else:
+            # Path is of the form 'INCModelFor.../model-name-formatted'
+            model_name = path.split('/')[-1]
+            data_inf_Q = np.array(get_data_from_path(os.path.join(path, 'inf_energy_data/quant'), verbose=False))
+            # Sum the quantization energy consumption to the inference of the quantized model
+            # tot_quant_data = [sum(x) for x in zip(data_quant, data_inf_Q)]
+            data_inf_NQ = np.array(get_data_from_path(os.path.join(path, 'inf_energy_data/non_quant'), False))
+
+            print("Task:Q_{} {}".format(task, stats.shapiro(data_inf_Q)))
+            print("Task:NQ_{} {}".format(task, stats.shapiro(data_inf_NQ)))
+            print("Task:{} {}".format(task, stats.ttest_ind(data_inf_Q, data_inf_NQ, equal_var = False)))
+            print("*******************************************************")
+
+
+#generate_violin_charts("../../../../ENERGY_DATA/energy")
+generate_metric_charts_csv("../../../../ENERGY_DATA/energy/optim-question-answ/inf_energy_data/quant/anakin87-electra-italian-xxl-cased-squad-it_Q_inf_exp15.csv",
+                           10, "Q_optim")
+#                           "non_quant/anakin87-electra-italian-xxl-cased-squad-it_inf_exp10.csv", 10, "NQ")
+# plot_exact_match("../../../../ENERGY_DATA/evaluation_results")
+# generate_boxplot_charts("../../../../ENERGY_DATA/energy")
+
 # plot_mean_stdv("../../../../ENERGY_DATA/evaluation_results")
 # generate_violin_charts_single("../../../../ENERGY_DATA/optim-question-answ", quant=False, quantization=False)
+welch_t_test("../../../../ENERGY_DATA/energy")
