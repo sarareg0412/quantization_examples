@@ -480,3 +480,19 @@ def get_metric_name_from_category(category):
             metric = "f1"
 
     return metric
+
+
+def get_model_name_from_task(task):
+    match task:
+        case 'question_answering':
+            return 'anakin87-electra-italian-xxl-cased-squad-it'
+        case 'optim-question-answ':
+            return 'anakin87-electra-italian-xxl-cased-squad-it-optim'
+        case 'maskedlm':
+            return 'huggingface-CodeBERTa-small-v1'
+        case 'multiple-choice':
+            return 'LIAMF-USP-roberta-large-finetuned-race'
+        case 'sequence_classification':
+            return 'cardiffnlp-twitter-roberta-base-sentiment-latest'
+        case 'token-class':
+            return 'dslim-bert-base-NER'

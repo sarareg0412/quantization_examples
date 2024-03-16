@@ -7,6 +7,8 @@ import seaborn as sns
 from analysis.utils import write_csv
 import scipy.stats as stats
 
+from utils import get_model_name_from_task
+
 # sns.set()
 sns.set_theme(style="whitegrid")
 import numpy as np
@@ -367,14 +369,69 @@ def welch_t_test(father):
             print("Task:{} {}".format(task, stats.ttest_ind(data_inf_Q, data_inf_NQ, equal_var = False)))
             print("*******************************************************")
 
+def get_dataset_size(task):
+    match task:
+        case 'question_answering' | 'optim-question-answ':
+            return 3805
+        case 'maskedlm':
+            return 11100
+        case 'multiple-choice':
+            return 300
+        case 'sequence_classification':
+            return 6142
+        case 'token-class':
+            return 1725
+
+
+def get_intersection(m1,m2,c1):
+    # Define the coefficient matrices and the constants vector
+    A = np.array([[m1, -1], [m2, -1]])
+    b = np.array([-c1, 0])
+    res = tuple(np.linalg.solve(A, b))
+    return (int(res[0]), int(res[1]))
+
+
+def create_linear_plot(father):
+    #analysis_file = "plots/energy_plots/welch_t_test.csv"
+    #write_csv(analysis_file, None, ["model_name", "energy", "quantized", "saved"])
+    for task in os.listdir(father):
+        path = os.path.join(father, task)
+        # fig, axes = plt.subplots(figsize=[5, 3])
+        plt.figure(figsize=(7, 10))
+        if not os.path.isdir(path):
+            print(f"Path {path} not found")
+        else:
+            data_Q = get_data_from_path(os.path.join(path, 'quant_energy_data'), verbose=False)
+            data_inf_Q = get_data_from_path(os.path.join(path, 'inf_energy_data/quant'), verbose=False)
+            data_inf_NQ = get_data_from_path(os.path.join(path, 'inf_energy_data/non_quant'), False)
+            model_name = get_model_name_from_task(task)
+            c = np.mean(data_Q)
+            x = range(0,get_dataset_size(task))
+            m1 = np.mean(data_inf_Q)/x[-1]
+            m2 =  np.mean(data_inf_NQ)/x[-1]
+            if task == 'optim-question-answ':
+                x = range(0,100000)
+            plt.plot(x, m1*x + c, '-g', label='Q model')  # solid green
+            plt.plot(x, m2*x, '-r', label = "NQ model")  # dashed red
+            plt.title(f"Model {model_name}")
+            plt.legend(loc='upper left')
+            intersection = get_intersection(m1,m2,c)
+            plt.text(intersection[0], intersection[1], f"{intersection}", bbox=dict(facecolor='white', alpha=0.5))
+            plt.xlabel('Data Points number')
+            plt.ylabel('Energy (J)')
+            plt.xlim(0, x[-1])
+            plt.ylim(bottom = 0)
+            #plt.show()
+            plt.savefig(os.path.join(f"./plots/energy_plots/final_plot_{model_name}.png"))
+
 
 #generate_violin_charts("../../../../ENERGY_DATA/energy")
-generate_metric_charts_csv("../../../../ENERGY_DATA/energy/optim-question-answ/inf_energy_data/quant/anakin87-electra-italian-xxl-cased-squad-it_Q_inf_exp15.csv",
-                           10, "Q_optim")
+#generate_metric_charts_csv("../../../../ENERGY_DATA/energy/optim-question-answ/inf_energy_data/quant/anakin87-electra-italian-xxl-cased-squad-it_Q_inf_exp15.csv", 10, "Q_optim")
 #                           "non_quant/anakin87-electra-italian-xxl-cased-squad-it_inf_exp10.csv", 10, "NQ")
 # plot_exact_match("../../../../ENERGY_DATA/evaluation_results")
 # generate_boxplot_charts("../../../../ENERGY_DATA/energy")
 
 # plot_mean_stdv("../../../../ENERGY_DATA/evaluation_results")
 # generate_violin_charts_single("../../../../ENERGY_DATA/optim-question-answ", quant=False, quantization=False)
-welch_t_test("../../../../ENERGY_DATA/energy")
+# welch_t_test("../../../../ENERGY_DATA/energy")
+create_linear_plot("../../../../ENERGY_DATA/energy")
